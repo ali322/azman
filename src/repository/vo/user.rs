@@ -1,4 +1,7 @@
-use crate::{repository::{dao::UserDao, DBError, POOL}, util::datetime_format::naive_datetime};
+use crate::{
+    repository::{dao::UserDao, DBError, POOL},
+    util::datetime_format::naive_datetime,
+};
 use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
 
@@ -6,7 +9,7 @@ use serde::{Deserialize, Serialize};
 pub struct User {
     pub id: String,
     pub username: String,
-    #[serde(skip_deserializing)]
+    #[serde(skip_serializing)]
     pub password: String,
     pub email: Option<String>,
     pub avatar: Option<String>,
@@ -29,7 +32,7 @@ impl From<UserDao> for User {
             avatar: dao.avatar,
             memo: dao.memo,
             sys_role: dao.sys_role,
-            is_actived: dao.is_actived,
+            is_actived: dao.is_actived.map(|v| v == 1),
             last_logined_at: dao.last_logined_at,
             created_at: dao.created_at,
         }
@@ -37,14 +40,14 @@ impl From<UserDao> for User {
 }
 
 impl User {
-  pub async fn find_one(id: String) -> Result<Self, DBError> {
-      let w = POOL.new_wrapper().eq("id", id);
-      UserDao::find_one(&w).await.map(Into::into)
-  }
-  pub async fn find_all() -> Result<Vec<Self>, DBError> {
-      let w = POOL.new_wrapper();
-      let all = UserDao::find_list(&w).await?;
-      let all: Vec<Self> = all.iter().map(|v| v.clone().into()).collect();
-      Ok(all)
-  }
+    pub async fn find_one(id: String) -> Result<Self, DBError> {
+        let w = POOL.new_wrapper().eq("id", id);
+        UserDao::find_one(&w).await.map(Into::into)
+    }
+    pub async fn find_all() -> Result<Vec<Self>, DBError> {
+        let w = POOL.new_wrapper();
+        let all = UserDao::find_list(&w).await?;
+        let all: Vec<Self> = all.iter().map(|v| v.clone().into()).collect();
+        Ok(all)
+    }
 }

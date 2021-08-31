@@ -13,6 +13,7 @@ pub struct Role {
     pub value: String,
     pub level: i32,
     pub domain_id: String,
+    pub is_deleted: Option<bool>,
     #[serde(serialize_with = "naive_datetime::serialize")]
     pub created_at: NaiveDateTime,
     #[serde(serialize_with = "naive_datetime::serialize")]
@@ -30,6 +31,7 @@ impl From<RoleDao> for Role {
             value: dao.value,
             level: dao.level,
             domain_id: dao.domain_id,
+            is_deleted: dao.is_deleted.map(|v| v == 1),
             created_by: dao.created_by,
             updated_by: dao.updated_by,
             created_at: dao.created_at,
@@ -48,5 +50,10 @@ impl Role {
         let all = RoleDao::find_list(&w).await?;
         let all: Vec<Self> = all.iter().map(|v| v.clone().into()).collect();
         Ok(all)
+    }
+    pub async fn delete_one(id: i32) -> Result<Self, DBError> {
+        let w = POOL.new_wrapper().eq("id", id);
+        let id = RoleDao::delete_one(&w).await?;
+        Self::find_one(id as i32).await
     }
 }

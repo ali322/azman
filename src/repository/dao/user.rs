@@ -12,7 +12,7 @@ pub struct UserDao {
     pub avatar: Option<String>,
     pub memo: Option<String>,
     pub sys_role: Option<String>,
-    pub is_actived: Option<bool>,
+    pub is_actived: Option<i32>,
     pub last_logined_at: NaiveDateTime,
     pub created_at: NaiveDateTime,
 }
@@ -24,5 +24,12 @@ impl UserDao {
     }
     pub async fn find_list(w: &Wrapper) -> Result<Vec<Self>, DBError> {
         POOL.fetch_list_by_wrapper::<Self>(w).await
+    }
+    pub async fn create_one(&self) -> Result<Option<i64>, DBError> {
+        let created = POOL.save(&self, &[]).await?;
+        Ok(created.last_insert_id)
+    }
+    pub async fn update_one(&self, w: &Wrapper) -> Result<u64, DBError> {
+        POOL.update_by_wrapper(&self, w, &[]).await
     }
 }

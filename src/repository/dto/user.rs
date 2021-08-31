@@ -1,10 +1,10 @@
-use rbatis::crud::CRUD;
-use serde::{Serialize, Deserialize};
-use validator::Validate;
-use chrono::{NaiveDateTime, Local};
+use crate::repository::{dao::UserDao, vo::User, DBError, POOL};
+use bcrypt::{hash, verify};
+use chrono::{Local, NaiveDateTime};
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use bcrypt::{hash};
-use crate::repository::{POOL, DBError, dao::UserDao, vo::User};
+use validator::Validate;
+use std::env;
 
 #[derive(Debug, Deserialize, Serialize, Validate)]
 pub struct NewUser {
@@ -18,6 +18,7 @@ pub struct NewUser {
     pub email: Option<String>,
     pub avatar: Option<String>,
     pub memo: Option<String>,
+    pub sys_role: Option<String>,
     #[serde(default = "now")]
     pub last_logined_at: NaiveDateTime,
 }
@@ -41,12 +42,62 @@ impl NewUser {
             email: self.email.clone(),
             avatar: self.avatar.clone(),
             memo: self.memo.clone(),
-            is_actived: None,
-            sys_role: None,
+            sys_role: Some("member".to_string()),
+            is_actived: Some(true as i32),
             last_logined_at: now(),
             created_at: now(),
         };
-        POOL.save(&dao, &[]).await?;
-        User::find_one(id).await
+        UserDao::create_one(&dao).await?;
+        Ok(dao.into())
+    }
+}
+
+#[derive(Debug, Clone, Deserialize, Validate)]
+pub struct UpdateUser {
+    #[validate(email)]
+    pub email: Option<String>,
+    pub avatar: Option<String>,
+    pub memo: Option<String>,
+}
+
+impl UpdateUser {
+    pub async fn save(&self, id: String) -> Result<User, DBError> {
+        let w = POOL.new_wrapper().eq("id", id);
+        let mut dao = UserDao::find_one(&w).await?;
+        dao.email = self.email.clone();
+        dao.avatar = self.avatar.clone();
+        dao.memo = self.memo.clone();
+        UserDao::update_one(&dao, &w).await?;
+        Ok(dao.into())
+    }
+}
+
+#[derive(Debug, Clone, Deserialize, Validate)]
+pub struct LoginUser {
+    #[validate(length(min = 1, max = 200))]
+    pub username_or_email: String,
+    #[validate(length(min = 3, max = 100))]
+    pub password: String,
+}
+
+impl LoginUser {
+    pub async fn find_one(&self) -> Result<UserDao, DBError> {
+        let w = POOL
+            .new_wrapper()
+            .eq("username", self.username_or_email.clone())
+            .or()
+            .eq("email", self.username_or_email.clone());
+        UserDao::find_one(&w).await
+    }
+    pub fn is_password_matched(&self, target: &str) -> bool {
+        verify(self.password.clone(), target).unwrap()
+    }
+    pub async fn login(&self, dao: &UserDao) -> Result<User, DBError> {
+        let mut dao = dao.clone();
+        dao.last_logined_at = now();
+        let w = POOL.new_wrapper().eq("id", dao.id.clone());
+        UserDao::update_one(&dao, &w).await?;
+        // POOL.save(&dao, &[]).await?;
+        Ok(dao.into())
     }
 }
