@@ -1,10 +1,12 @@
-use axum::{handler::get, routing::BoxRoute, Router};
+use axum::{
+    routing::BoxRoute,
+    Router,
+};
 
-async fn index() -> &'static str {
-    "hello world"
-}
+mod role;
 
 pub fn apply_routes() -> Router<BoxRoute> {
-    let v1 = Router::new().route("/", get(index));
-    v1.boxed()
+    let mut v1 = Router::new().boxed();
+    v1 = role::apply_routes(v1.boxed());
+    v1
 }

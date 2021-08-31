@@ -1,6 +1,18 @@
 use axum::{Router, handler::get, routing::BoxRoute};
 
-pub mod v1;
+macro_rules! reject {
+  ($e: expr) => {
+      crate::util::APIErrror::Custom($e)
+  };
+}
+
+macro_rules! reply {
+  ($t: tt) => {
+    axum::response::Json(serde_json::json!({"code":0, "data": $t}))
+  };
+}
+
+mod v1;
 
 async fn index() -> &'static str {
   "hello world"

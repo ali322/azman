@@ -50,7 +50,7 @@ CREATE TABLE IF NOT EXISTS `user_has_roles`(
   PRIMARY KEY(`user_id`, `role_id`)
 );
 
-CREATE TABLE IF NOT EXISTS `actions`(
+CREATE TABLE IF NOT EXISTS `perms`(
   `id` INT NOT NULL AUTO_INCREMENT,
   `name` VARCHAR(100) NOT NULL,
   `description` TEXT,
@@ -64,13 +64,13 @@ CREATE TABLE IF NOT EXISTS `actions`(
   PRIMARY KEY (`id`)
 );
 
-CREATE TABLE IF NOT EXISTS `role_has_actions`(
-  `action_id` INTEGER REFERENCES `actions`(`id`),
+CREATE TABLE IF NOT EXISTS `role_has_perms`(
+  `perm_id` INTEGER REFERENCES `perms`(`id`),
   `role_id` INTEGER REFERENCES `roles`(`id`),
-  PRIMARY KEY(`action_id`, `role_id`)
+  PRIMARY KEY(`perm_id`, `role_id`)
 );
 
-CREATE TABLE IF NOT EXISTS `organizations` (
+CREATE TABLE IF NOT EXISTS `orgs` (
   `id` varchar(100) NOT NULL,
   `name` VARCHAR(100) NOT NULL,
   `description` TEXT,
@@ -83,9 +83,9 @@ CREATE TABLE IF NOT EXISTS `organizations` (
   PRIMARY KEY (`id`)
 );
 
-CREATE TABLE IF NOT EXISTS `user_has_organizations`(
+CREATE TABLE IF NOT EXISTS `user_has_orgs`(
   `user_id` VARCHAR(100) REFERENCES `users`(`id`),
-  `org_id` VARCHAR(100) REFERENCES `organizations`(`id`),
+  `org_id` VARCHAR(100) REFERENCES `orgs`(`id`),
   `expire` TIMESTAMP NOT NULL,
   PRIMARY KEY(`user_id`, `org_id`)
 );

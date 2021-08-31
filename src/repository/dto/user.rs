@@ -1,3 +1,4 @@
+use rbatis::crud::CRUD;
 use serde::{Serialize, Deserialize};
 use validator::Validate;
 use chrono::{NaiveDateTime, Local};
@@ -28,12 +29,12 @@ fn now() -> NaiveDateTime {
 impl NewUser {
     pub async fn exists(&self) -> Result<UserDao, DBError> {
         let w = POOL.new_wrapper().eq("username", self.username.clone());
-        UserDao::find_one_by_wrapper(&w).await
+        UserDao::find_one(&w).await
     }
     pub async fn create(&self) -> Result<User, DBError> {
         let id = Uuid::new_v4().to_string();
         let hashed_password = hash(&self.password, 4).unwrap();
-        let u = UserDao {
+        let dao = UserDao {
             id: id.clone(),
             username: self.username.clone(),
             password: hashed_password,
@@ -45,7 +46,7 @@ impl NewUser {
             last_logined_at: now(),
             created_at: now(),
         };
-        u.save().await?;
-        UserDao::find_one(id).await
+        POOL.save(&dao, &[]).await?;
+        User::find_one(id).await
     }
 }

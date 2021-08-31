@@ -1,7 +1,7 @@
 #[tokio::main]
 async fn main() {
     use axum::Server;
-    use azman::api::v1::apply_routes;
+    use azman::api::apply_routes;
     use dotenv::dotenv;
     use std::{env, net::SocketAddr};
     if env::var("RUST_LOG").is_err() {
