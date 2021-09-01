@@ -1,9 +1,12 @@
 use crate::repository::{DBError, POOL};
 use chrono::NaiveDateTime;
 use rbatis::{crud::CRUD, wrapper::Wrapper};
+use app_macro::Dao;
+use app_macro_derive::Dao;
+use async_trait::async_trait;
 
 #[crud_table(table_name: "perms")]
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Dao)]
 pub struct PermDao {
     pub id: Option<i32>,
     pub name: String,
@@ -15,24 +18,4 @@ pub struct PermDao {
     pub updated_at: NaiveDateTime,
     pub created_by: String,
     pub updated_by: String,
-}
-
-impl PermDao {
-    pub async fn find_one(w: &Wrapper) -> Result<Self, DBError> {
-        let w = w.clone().order_by(true, &["id"]).limit(1);
-        POOL.fetch_by_wrapper::<Self>(&w).await
-    }
-    pub async fn find_list(w: &Wrapper) -> Result<Vec<Self>, DBError> {
-        POOL.fetch_list_by_wrapper(w).await
-    }
-    pub async fn create_one(&self) -> Result<Option<i64>, DBError> {
-        let created = POOL.save(&self, &[]).await?;
-        Ok(created.last_insert_id)
-    }
-    pub async fn update_one(&self, w: &Wrapper) -> Result<u64, DBError> {
-        POOL.update_by_wrapper(&self, w, &[]).await
-    }
-    pub async fn delete_one(w: &Wrapper) -> Result<u64, DBError> {
-        POOL.remove_by_wrapper::<Self>(w).await
-    }
 }

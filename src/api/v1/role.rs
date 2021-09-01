@@ -7,7 +7,7 @@ use axum::{
 
 use crate::{
     repository::{
-        dto::{NewRole, UpdateRole},
+        dto::{UserGrantRole, NewRole, UserRevokeRole, UpdateRole},
         vo::Role,
     },
     util::APIResult,
@@ -41,8 +41,20 @@ async fn remove(Path(id): Path<i32>) -> APIResult {
     Ok(reply!(removed))
 }
 
+async fn grant(Json(body): Json<UserGrantRole>) -> APIResult {
+    let granted = body.save().await?;
+    Ok(reply!(granted))
+}
+
+async fn revoke(Json(body): Json<UserRevokeRole>) -> APIResult {
+    let revoked = body.save().await?;
+    Ok(reply!(revoked))
+}
+
 pub fn apply_routes(v1: Router<BoxRoute>) -> Router<BoxRoute> {
     v1.route("/role", post(create).get(all))
         .route("/role/:id", put(update).get(one).delete(remove))
+        .route("/grant/role", post(grant))
+        .route("/revoke/role", post(revoke))
         .boxed()
 }

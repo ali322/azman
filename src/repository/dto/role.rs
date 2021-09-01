@@ -2,6 +2,7 @@ use crate::repository::{dao::RoleDao, vo::Role, DBError, POOL};
 use chrono::{Local, NaiveDateTime};
 use serde::{Deserialize, Serialize};
 use validator::Validate;
+use app_macro::Dao;
 
 #[derive(Debug, Deserialize, Serialize, Validate)]
 pub struct NewRole {
@@ -48,7 +49,7 @@ impl NewRole {
             updated_at: now(),
         };
         let id = RoleDao::create_one(&dao).await?;
-        dao.id = Some(id.unwrap() as i32);
+        dao.id = Some(id as i32);
         Ok(dao.into())
     }
 }

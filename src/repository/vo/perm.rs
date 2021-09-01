@@ -4,6 +4,7 @@ use crate::{
 };
 use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
+use app_macro::Dao;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Perm {
@@ -51,7 +52,7 @@ impl Perm {
     }
     pub async fn delete_one(id: i32) -> Result<Self, DBError> {
         let w = POOL.new_wrapper().eq("id", id);
-        let id = PermDao::delete_one(&w).await?;
+        PermDao::delete_one(&w).await?;
         Self::find_one(id as i32).await
     }
 }

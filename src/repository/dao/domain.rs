@@ -5,18 +5,15 @@ use app_macro::Dao;
 use app_macro_derive::Dao;
 use async_trait::async_trait;
 
-#[crud_table(table_name: "roles")]
+#[crud_table(table_name: "domains")]
 #[derive(Debug, Clone, Dao)]
-pub struct RoleDao {
+pub struct DomainDao {
     pub id: Option<i32>,
     pub name: String,
     pub description: Option<String>,
-    pub value: String,
-    pub level: i32,
-    pub domain_id: String,
+    pub default_role_id: Option<i32>,
+    pub admin_role_id: Option<i32>,
     pub is_deleted: Option<i32>,
     pub created_at: NaiveDateTime,
-    pub updated_at: NaiveDateTime,
-    pub created_by: String,
-    pub updated_by: String,
+    pub updated_at: NaiveDateTime
 }

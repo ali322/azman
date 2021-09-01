@@ -4,7 +4,7 @@ use chrono::{Local, NaiveDateTime};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use validator::Validate;
-use std::env;
+use app_macro::Dao;
 
 #[derive(Debug, Deserialize, Serialize, Validate)]
 pub struct NewUser {
