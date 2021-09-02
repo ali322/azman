@@ -2,9 +2,9 @@ use crate::{
     repository::{dao::UserDao, DBError, POOL},
     util::datetime_format::naive_datetime,
 };
+use app_macro::Dao;
 use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
-use app_macro::Dao;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct User {
@@ -16,7 +16,7 @@ pub struct User {
     pub avatar: Option<String>,
     pub memo: Option<String>,
     pub sys_role: Option<String>,
-    pub is_actived: Option<bool>,
+    pub is_actived: bool,
     #[serde(serialize_with = "naive_datetime::serialize")]
     pub last_logined_at: NaiveDateTime,
     #[serde(serialize_with = "naive_datetime::serialize")]
@@ -33,7 +33,7 @@ impl From<UserDao> for User {
             avatar: dao.avatar,
             memo: dao.memo,
             sys_role: dao.sys_role,
-            is_actived: dao.is_actived.map(|v| v == 1),
+            is_actived: dao.is_actived.map(|v| v == 1).unwrap(),
             last_logined_at: dao.last_logined_at,
             created_at: dao.created_at,
         }

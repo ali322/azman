@@ -7,6 +7,6 @@ use async_trait::async_trait;
 #[crud_table(table_name: "role_has_perms")]
 #[derive(Debug, Clone, Dao)]
 pub struct RolePermDao {
-    pub role_id: Option<i32>,
-    pub perm_id: Option<i32>
+    pub role_id: i32,
+    pub perm_id: i32
 }

@@ -13,15 +13,15 @@ pub type APIResult = Result<Json<Value>, APIErrror>;
 
 #[derive(Error, Debug)]
 #[error("{}", .0)]
-pub enum APIErrror {
+pub enum APIErrror{
     IO(#[from] IOError),
-    Custom(&'static str),
+    Custom(String),
     ParseInt(#[from] ParseIntError),
     Validate(#[from] ValidationErrors),
     DBError(#[from] DBError),
 }
 
-impl IntoResponse for APIErrror {
+impl IntoResponse for APIErrror{
     type Body = Body;
     type BodyError = <Self::Body as axum::body::HttpBody>::Error;
     fn into_response(self) -> Response<Body> {

@@ -2,6 +2,7 @@ use crate::repository::{dao::DomainDao, vo::Domain, DBError, POOL};
 use app_macro::Dao;
 use chrono::{Local, NaiveDateTime};
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 use validator::Validate;
 
 #[derive(Debug, Deserialize, Serialize, Validate)]
@@ -18,9 +19,9 @@ fn now() -> NaiveDateTime {
 }
 
 impl NewDomain {
-    pub async fn create(&self) -> Result<Domain, DBError> {
-        let mut dao = DomainDao {
-            id: None,
+    pub async fn create(&self, id: String) -> Result<Domain, DBError> {
+        let dao = DomainDao {
+            id: id.clone(),
             name: self.name.clone(),
             description: self.description.clone(),
             default_role_id: self.default_role_id,
@@ -29,8 +30,7 @@ impl NewDomain {
             created_at: now(),
             updated_at: now(),
         };
-        let id = DomainDao::create_one(&dao).await?;
-        dao.id = Some(id as i32);
+        DomainDao::create_one(&dao).await?;
         Ok(dao.into())
     }
 }
@@ -43,7 +43,7 @@ pub struct UpdateDomain {
 }
 
 impl UpdateDomain {
-    pub async fn save(&self, id: i32) -> Result<Domain, DBError> {
+    pub async fn save(&self, id: String) -> Result<Domain, DBError> {
         let w = POOL.new_wrapper().eq("id", id);
         let mut dao = DomainDao::find_one(&w).await?;
         dao.name = self.name.clone();

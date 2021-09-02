@@ -8,7 +8,7 @@ use rbatis::{crud::CRUD, wrapper::Wrapper};
 #[crud_table(table_name: "user_has_orgs")]
 #[derive(Debug, Clone, Dao)]
 pub struct UserOrgDao {
-    pub user_id: Option<String>,
-    pub org_id: Option<String>,
+    pub user_id: String,
+    pub org_id: String,
     pub expire: NaiveDateTime
 }

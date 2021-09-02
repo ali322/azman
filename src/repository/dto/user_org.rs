@@ -6,8 +6,8 @@ use validator::Validate;
 
 #[derive(Debug, Deserialize, Serialize, Validate)]
 pub struct UserJoinOrg {
-    pub user_id: Option<String>,
-    pub org_id: Option<String>,
+    pub user_id: String,
+    pub org_id: String,
     pub expire: NaiveDateTime,
 }
 

@@ -3,8 +3,8 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RolePerm {
-    pub role_id: Option<i32>,
-    pub perm_id: Option<i32>,
+    pub role_id: i32,
+    pub perm_id: i32,
 }
 
 impl From<RolePermDao> for RolePerm {

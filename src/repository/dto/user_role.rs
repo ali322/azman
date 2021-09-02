@@ -6,9 +6,8 @@ use validator::Validate;
 
 #[derive(Debug, Deserialize, Serialize, Validate)]
 pub struct UserGrantRole {
-    pub user_id: Option<String>,
-    pub role_id: Option<i32>,
-    pub expire: NaiveDateTime,
+    pub user_id: String,
+    pub role_id: i32
 }
 
 fn default_expire() -> NaiveDateTime {

@@ -8,7 +8,7 @@ use async_trait::async_trait;
 #[crud_table(table_name: "domains")]
 #[derive(Debug, Clone, Dao)]
 pub struct DomainDao {
-    pub id: Option<i32>,
+    pub id: String,
     pub name: String,
     pub description: Option<String>,
     pub default_role_id: Option<i32>,

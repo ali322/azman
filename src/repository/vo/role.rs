@@ -2,9 +2,9 @@ use crate::{
     repository::{dao::RoleDao, DBError, POOL},
     util::datetime_format::naive_datetime,
 };
+use app_macro::Dao;
 use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
-use app_macro::Dao;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Role {
@@ -48,6 +48,18 @@ impl Role {
     }
     pub async fn find_all() -> Result<Vec<Self>, DBError> {
         let w = POOL.new_wrapper();
+        let all = RoleDao::find_list(&w).await?;
+        let all: Vec<Self> = all.iter().map(|v| v.clone().into()).collect();
+        Ok(all)
+    }
+    pub async fn find_by_ids(
+        ids: Vec<i32>,
+        domain_id: Option<String>,
+    ) -> Result<Vec<Self>, DBError> {
+        let mut w = POOL.new_wrapper().r#in("id", &ids);
+        if let Some(domain_id) = domain_id {
+            w = w.and().eq("domain_id", domain_id);
+        }
         let all = RoleDao::find_list(&w).await?;
         let all: Vec<Self> = all.iter().map(|v| v.clone().into()).collect();
         Ok(all)

@@ -8,7 +8,7 @@ use app_macro::Dao;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Domain {
-  pub id: Option<i32>,
+  pub id: String,
   pub name: String,
   pub description: Option<String>,
   pub default_role_id: Option<i32>,
@@ -36,7 +36,7 @@ impl From<DomainDao> for Domain {
 }
 
 impl Domain {
-  pub async fn find_one(id: i32) -> Result<Self, DBError> {
+  pub async fn find_one(id: String) -> Result<Self, DBError> {
       let w = POOL.new_wrapper().eq("id", id);
       DomainDao::find_one(&w).await.map(Into::into)
   }
@@ -46,9 +46,9 @@ impl Domain {
       let all: Vec<Self> = all.iter().map(|v| v.clone().into()).collect();
       Ok(all)
   }
-  pub async fn delete_one(id: i32) -> Result<Self, DBError> {
-      let w = POOL.new_wrapper().eq("id", id);
+  pub async fn delete_one(id: String) -> Result<Self, DBError> {
+      let w = POOL.new_wrapper().eq("id", id.clone());
       DomainDao::delete_one(&w).await?;
-      Self::find_one(id as i32).await
+      Self::find_one(id).await
   }
 }

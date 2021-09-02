@@ -35,14 +35,14 @@ impl AuthorizeRequest for Restrict {
                     Ok(token_data) => output = Some(token_data.claims.auth),
                     Err(e) => {
                         self.reject_reason =
-                            Some(format!("header Authorization decode failed: {:?}", e))
+                            Some(format!("请求头 Authorization 解析错误: {:?}", e))
                     }
                 }
             } else {
-                self.reject_reason = Some("header Authorization is invalid".to_string());
+                self.reject_reason = Some("请求头 Authorization 不合法".to_string());
             }
         } else {
-            self.reject_reason = Some("header Authorization could not be empty".to_string());
+            self.reject_reason = Some("请求头 Authorization 不能为空".to_string());
         }
         output
     }

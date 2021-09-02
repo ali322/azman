@@ -10,6 +10,11 @@ use std::env;
 pub struct Auth {
     pub id: String,
     pub username: String,
+    pub domain_id: Option<String>,
+    pub org_id: Vec<String>,
+    pub role_id: Vec<i32>,
+    pub role_level: i32,
+    pub is_admin: bool,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -33,10 +38,11 @@ impl Payload {
     }
 }
 
-pub fn generate_token<'a>(id: String, username: String) -> String {
+pub fn generate_token(
+    auth: Auth
+) -> String {
     let iat = Utc::now();
     let exp = iat + Duration::days(30);
-    let auth = Auth { id, username };
     let payload = Payload::new(auth, iat, exp);
     let jwt_key = env::var("JWT_KEY").expect("environment variable JWT_KEY must be set");
     encode(
