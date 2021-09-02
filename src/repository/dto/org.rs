@@ -13,9 +13,7 @@ pub struct NewOrg {
     #[serde(skip_deserializing)]
     pub domain_id: String,
     #[serde(skip_deserializing)]
-    pub created_by: String,
-    #[serde(skip_deserializing)]
-    pub updated_by: String,
+    pub created_by: Option<String>,
 }
 
 fn now() -> NaiveDateTime {
@@ -23,14 +21,6 @@ fn now() -> NaiveDateTime {
 }
 
 impl NewOrg {
-    pub fn copy_with(self, domain_id: String, user_id: String) -> Self {
-        Self {
-            domain_id: domain_id.clone(),
-            created_by: user_id.clone(),
-            updated_by: user_id.clone(),
-            ..self
-        }
-    }
     pub async fn create(&self) -> Result<Org, DBError> {
         let id = Uuid::new_v4().to_string();
         let dao = OrgDao {
@@ -40,7 +30,7 @@ impl NewOrg {
             domain_id: self.domain_id.clone(),
             is_deleted: Some(0),
             created_by: self.created_by.clone(),
-            updated_by: self.updated_by.clone(),
+            updated_by: None,
             created_at: now(),
             updated_at: now(),
         };
@@ -56,6 +46,8 @@ pub struct UpdateOrg {
     pub description: Option<String>,
     #[validate(length(min = 1, max = 200))]
     pub value: String,
+    #[serde(skip_deserializing)]
+    pub updated_by: Option<String>,
 }
 
 impl UpdateOrg {

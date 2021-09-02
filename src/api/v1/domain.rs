@@ -1,22 +1,24 @@
 use axum::{
-    extract::Path,
+    extract::{Extension, Path},
     handler::{post, put},
     routing::BoxRoute,
     Json, Router,
 };
-use std::env;
-use uuid::Uuid;
+use tower_http::auth::RequireAuthorizationLayer;
 
 use crate::{
     repository::{
-        dto::{NewDomain, NewRole, UpdateDomain},
+        dto::{NewDomain, UpdateDomain},
         vo::Domain,
     },
-    util::APIResult,
+    util::{jwt::Auth, restrict::Restrict, APIResult},
 };
 use validator::Validate;
 
-async fn all() -> APIResult {
+async fn all(Extension(auth): Extension<Auth>) -> APIResult {
+    if !auth.is_admin {
+        return Err(reject!("仅管理员可访问"));
+    }
     let all = Domain::find_all().await?;
     Ok(reply!(all))
 }
@@ -26,51 +28,32 @@ async fn one(Path(id): Path<String>) -> APIResult {
     Ok(reply!(one))
 }
 
-async fn create(Json(body): Json<NewDomain>) -> APIResult {
+async fn create(Json(body): Json<NewDomain>, Extension(auth): Extension<Auth>) -> APIResult {
+    if !auth.is_admin {
+        return Err(reject!("仅管理员可访问"));
+    }
     body.validate()?;
-    let id = Uuid::new_v4().to_string();
-    // let created = body.create().await?;
-    let admin_role_name =
-        env::var("ADMIN_ROLE_NAME").expect("environment variable ADMIN_ROLE_NAME must be set");
-    let common_role_name =
-        env::var("COMMON_ROLE_NAME").expect("environment variable COMMON_ROLE_NAME must be set");
-    let new_role = NewRole {
-        name: admin_role_name.clone(),
-        description: None,
-        value: admin_role_name.clone(),
-        level: 1,
-        domain_id: id.clone(),
-        created_by: "None".to_string(),
-        updated_by: "None".to_string(),
-    };
-    let admin_role = new_role.create().await?;
-    let new_role = NewRole {
-        name: common_role_name.clone(),
-        description: None,
-        value: common_role_name.clone(),
-        level: 1,
-        domain_id: id.clone(),
-        created_by: "None".to_string(),
-        updated_by: "None".to_string(),
-    };
-    let common_role = new_role.create().await?;
-    let body = NewDomain {
-        admin_role_id: admin_role.id,
-        default_role_id: common_role.id,
-        ..body
-    };
-    let created = body.create(id).await?;
+    let created = body.create(auth.id).await?;
     Ok(reply!(created))
 }
 
-async fn update(Path(id): Path<String>, Json(body): Json<UpdateDomain>) -> APIResult {
+async fn update(
+    Path(id): Path<String>,
+    Json(body): Json<UpdateDomain>,
+    Extension(auth): Extension<Auth>,
+) -> APIResult {
+    if !auth.is_admin {
+        return Err(reject!("仅管理员可访问"));
+    }
     body.validate()?;
     let updated = body.save(id).await?;
     Ok(reply!(updated))
 }
 
 pub fn apply_routes(v1: Router<BoxRoute>) -> Router<BoxRoute> {
+    let restrict_layer = RequireAuthorizationLayer::custom(Restrict::new());
     v1.route("/domain", post(create).get(all))
         .route("/domain/:id", put(update).get(one))
+        .layer(restrict_layer)
         .boxed()
 }

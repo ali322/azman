@@ -6,7 +6,7 @@ use jsonwebtoken::{
 use serde::{Deserialize, Serialize};
 use std::env;
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Auth {
     pub id: String,
     pub username: String,

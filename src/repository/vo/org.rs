@@ -17,8 +17,8 @@ pub struct Org {
     pub created_at: NaiveDateTime,
     #[serde(serialize_with = "naive_datetime::serialize")]
     pub updated_at: NaiveDateTime,
-    pub created_by: String,
-    pub updated_by: String,
+    pub created_by: Option<String>,
+    pub updated_by: Option<String>,
 }
 
 impl From<OrgDao> for Org {

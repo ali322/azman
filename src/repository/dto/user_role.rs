@@ -47,8 +47,8 @@ impl UpdateUserRole {
 
 #[derive(Debug, Deserialize, Serialize, Validate)]
 pub struct UserRevokeRole {
-    pub user_id: Option<String>,
-    pub role_id: Option<i32>,
+    pub user_id: String,
+    pub role_id: i32,
 }
 
 impl UserRevokeRole {

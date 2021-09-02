@@ -15,6 +15,6 @@ pub struct OrgDao {
     pub is_deleted: Option<i32>,
     pub created_at: NaiveDateTime,
     pub updated_at: NaiveDateTime,
-    pub created_by: String,
-    pub updated_by: String,
+    pub created_by: Option<String>,
+    pub updated_by: Option<String>,
 }

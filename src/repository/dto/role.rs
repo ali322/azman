@@ -16,9 +16,7 @@ pub struct NewRole {
     #[serde(skip_deserializing)]
     pub domain_id: String,
     #[serde(skip_deserializing)]
-    pub created_by: String,
-    #[serde(skip_deserializing)]
-    pub updated_by: String,
+    pub created_by: Option<String>
 }
 
 fn now() -> NaiveDateTime {
@@ -26,14 +24,6 @@ fn now() -> NaiveDateTime {
 }
 
 impl NewRole {
-    pub fn copy_with(self, domain_id: String, user_id: String) -> Self {
-        Self {
-            domain_id: domain_id.clone(),
-            created_by: user_id.clone(),
-            updated_by: user_id.clone(),
-            ..self
-        }
-    }
     pub async fn create(&self) -> Result<Role, DBError> {
         let mut dao = RoleDao {
             id: None,
@@ -44,7 +34,7 @@ impl NewRole {
             domain_id: self.domain_id.clone(),
             is_deleted: Some(0),
             created_by: self.created_by.clone(),
-            updated_by: self.updated_by.clone(),
+            updated_by: None,
             created_at: now(),
             updated_at: now(),
         };
@@ -63,6 +53,8 @@ pub struct UpdateRole {
     pub value: String,
     #[validate(range(min = 2, max = 99))]
     pub level: i32,
+    #[serde(skip_deserializing)]
+    pub updated_by: Option<String>,
 }
 
 impl UpdateRole {
@@ -73,6 +65,7 @@ impl UpdateRole {
         dao.description = self.description.clone();
         dao.value = self.value.clone();
         dao.level = self.level.clone();
+        dao.updated_by = self.updated_by.clone();
         RoleDao::update_one(&dao, &w).await?;
         Ok(dao.into())
     }

@@ -22,8 +22,8 @@ impl RoleGrantPerm {
 
 #[derive(Debug, Deserialize, Serialize, Validate)]
 pub struct RoleRevokePerm {
-    pub role_id: Option<i32>,
-    pub perm_id: Option<i32>,
+    pub role_id: i32,
+    pub perm_id: i32,
 }
 
 impl RoleRevokePerm {
