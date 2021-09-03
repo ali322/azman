@@ -1,7 +1,10 @@
-use crate::{repository::{dao::UserRoleDao, POOL, DBError}, util::datetime_format::naive_datetime};
+use crate::{
+    repository::{dao::UserRoleDao, DBError, POOL},
+    util::datetime_format::naive_datetime,
+};
+use app_macro::Dao;
 use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
-use app_macro::Dao;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UserRole {
@@ -22,10 +25,18 @@ impl From<UserRoleDao> for UserRole {
 }
 
 impl UserRole {
-  pub async fn find_by_user(user_id: String) -> Result<Vec<Self>, DBError> {
-      let w = POOL.new_wrapper().eq("user_id", user_id);
-      let all = UserRoleDao::find_list(&w).await?;
-      let all: Vec<Self> = all.iter().map(|v| v.clone().into()).collect();
-      Ok(all)
-  }
+    pub async fn find_by_user(user_id: String) -> Result<Vec<Self>, DBError> {
+        let w = POOL.new_wrapper().eq("user_id", user_id);
+        let all = UserRoleDao::find_list(&w).await?;
+        let all: Vec<Self> = all.iter().map(|v| v.clone().into()).collect();
+        Ok(all)
+    }
+    pub async fn find_one(user_id: String, role_id: i32) -> Result<Self, DBError> {
+        let w = POOL
+            .new_wrapper()
+            .eq("user_id", user_id)
+            .and()
+            .eq("role_id", role_id);
+        UserRoleDao::find_one(&w).await.map(Into::into)
+    }
 }
