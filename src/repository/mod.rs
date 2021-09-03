@@ -1,13 +1,10 @@
-use rbatis::{
-    core::{runtime::task::block_on, Error},
-    plugin::logic_delete::RbatisLogicDeletePlugin,
-    rbatis::Rbatis,
-};
+use rbatis::{core::Error, plugin::logic_delete::RbatisLogicDeletePlugin, rbatis::Rbatis};
 use std::env;
+use futures::executor::block_on;
 
 pub mod dao;
-pub mod vo;
 pub mod dto;
+pub mod vo;
 
 pub type DBPool = Rbatis;
 pub type DBError = Error;

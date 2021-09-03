@@ -51,4 +51,12 @@ impl User {
         let all: Vec<Self> = all.iter().map(|v| v.clone().into()).collect();
         Ok(all)
     }
+    pub async fn find_by_ids(
+        ids: Vec<String>,
+    ) -> Result<Vec<Self>, DBError> {
+        let w = POOL.new_wrapper().r#in("id", &ids);
+        let all = UserDao::find_list(&w).await?;
+        let all: Vec<Self> = all.iter().map(|v| v.clone().into()).collect();
+        Ok(all)
+    }
 }

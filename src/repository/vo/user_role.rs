@@ -31,6 +31,12 @@ impl UserRole {
         let all: Vec<Self> = all.iter().map(|v| v.clone().into()).collect();
         Ok(all)
     }
+    pub async fn find_by_role(role_id: i32) -> Result<Vec<Self>, DBError> {
+        let w = POOL.new_wrapper().eq("role_id", role_id);
+        let all = UserRoleDao::find_list(&w).await?;
+        let all: Vec<Self> = all.iter().map(|v| v.clone().into()).collect();
+        Ok(all)
+    }
     pub async fn find_one(user_id: String, role_id: i32) -> Result<Self, DBError> {
         let w = POOL
             .new_wrapper()
