@@ -1,10 +1,13 @@
 use crate::{
-    repository::{dto::UpdateUser, vo::User},
-    util::{restrict::Restrict, APIResult},
+    repository::{
+        dto::{ChangePassword, ResetPassword, UpdateUser},
+        vo::User,
+    },
+    util::{jwt::Auth, restrict::Restrict, APIResult},
 };
 use axum::{
-    extract::Path,
-    handler::{get, put},
+    extract::{Extension, Path},
+    handler::{get, post, put},
     routing::BoxRoute,
     Json, Router,
 };
@@ -27,10 +30,50 @@ async fn update(Path(id): Path<String>, Json(body): Json<UpdateUser>) -> APIResu
     Ok(reply!(updated))
 }
 
+async fn change_password(
+    Json(body): Json<ChangePassword>,
+    Extension(auth): Extension<Auth>,
+) -> APIResult {
+    body.validate()?;
+    let user;
+    match User::find_one(auth.id.clone()).await {
+        Ok(val) => user = val,
+        Err(_) => return Err(reject!("用户不存在")),
+    }
+    if !body.is_password_matched(&user.password) {
+        return Err(reject!("旧密码不正确"));
+    }
+    let user = body.change_password(auth.id.clone()).await?;
+    Ok(reply!(user))
+}
+
+async fn reset_password(
+    id: String,
+    Json(body): Json<ResetPassword>,
+    Extension(auth): Extension<Auth>,
+) -> APIResult {
+    if !auth.is_admin {
+        return Err(reject!("仅管理员可访问"));
+    }
+    body.validate()?;
+    if User::find_one(id.clone()).await.is_err() {
+        return Err(reject!("用户不存在"));
+    }
+    let user = body.reset_password(id).await?;
+    Ok(reply!(user))
+}
+
+async fn me(Extension(auth): Extension<Auth>) -> APIResult {
+    Ok(reply!(auth))
+}
+
 pub fn apply_routes(v1: Router<BoxRoute>) -> Router<BoxRoute> {
     let restrict_layer = RequireAuthorizationLayer::custom(Restrict::new());
     v1.route("/user", get(all))
         .route("/user/:id", put(update).get(one))
+        .route("/change/password", post(change_password))
+        .route("/reset/:id/password", post(reset_password))
+        .route("/me", get(me))
         .layer(restrict_layer)
         .boxed()
 }

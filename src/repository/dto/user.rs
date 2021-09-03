@@ -1,10 +1,10 @@
 use crate::repository::{dao::UserDao, vo::User, DBError, POOL};
+use app_macro::Dao;
 use bcrypt::{hash, verify};
 use chrono::{Local, NaiveDateTime};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use validator::Validate;
-use app_macro::Dao;
 
 #[derive(Debug, Deserialize, Serialize, Validate)]
 pub struct NewUser {
@@ -98,6 +98,89 @@ impl LoginUser {
         let w = POOL.new_wrapper().eq("id", dao.id.clone());
         UserDao::update_one(&dao, &w).await?;
         // POOL.save(&dao, &[]).await?;
+        Ok(dao.into())
+    }
+}
+
+#[derive(Debug, Deserialize, Serialize, Validate)]
+pub struct ConnectUser {
+    #[validate(length(min = 1, max = 50))]
+    pub username: String,
+    #[validate(email)]
+    pub email: Option<String>,
+    pub avatar: Option<String>,
+    pub memo: Option<String>,
+    pub sys_role: Option<String>,
+    #[serde(default = "now")]
+    pub last_logined_at: NaiveDateTime,
+}
+
+const CONNECT_PASSWORD: &'static str = "123456";
+
+impl ConnectUser {
+    pub async fn exists(&self) -> Result<UserDao, DBError> {
+        let w = POOL.new_wrapper().eq("username", self.username.clone());
+        UserDao::find_one(&w).await
+    }
+    pub async fn create(&self) -> Result<User, DBError> {
+        let id = Uuid::new_v4().to_string();
+        let hashed_password = hash(CONNECT_PASSWORD, 4).unwrap();
+        let dao = UserDao {
+            id: id.clone(),
+            username: self.username.clone(),
+            password: hashed_password,
+            email: self.email.clone(),
+            avatar: self.avatar.clone(),
+            memo: self.memo.clone(),
+            sys_role: Some("member".to_string()),
+            is_actived: Some(true as i32),
+            last_logined_at: now(),
+            created_at: now(),
+        };
+        UserDao::create_one(&dao).await?;
+        Ok(dao.into())
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, Validate)]
+pub struct ChangePassword {
+    #[validate(length(min = 3, max = 200))]
+    pub old_password: String,
+    #[validate(length(min = 3, max = 200))]
+    pub new_password: String,
+    #[validate(must_match(other = "new_password", message = "密码不匹配"))]
+    pub repeat_password: String,
+}
+
+impl ChangePassword {
+    pub fn is_password_matched(&self, target: &str) -> bool {
+        verify(&self.old_password, target).unwrap()
+    }
+    pub async fn change_password(&self, id: String) -> Result<User, DBError> {
+        let hashed_password = hash(&self.new_password, 4).unwrap();
+        let w = POOL.new_wrapper().eq("id", id);
+        let mut dao = UserDao::find_one(&w).await?;
+        dao.password = hashed_password;
+        UserDao::update_one(&dao, &w).await?;
+        Ok(dao.into())
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, Validate)]
+pub struct ResetPassword {
+    #[validate(length(min = 3, max = 200))]
+    pub new_password: String,
+    #[validate(must_match = "new_password")]
+    pub repeat_password: String,
+}
+
+impl ResetPassword {
+    pub async fn reset_password(&self, id: String) -> Result<User, DBError> {
+        let hashed_password = hash(&self.new_password, 4).unwrap();
+        let w = POOL.new_wrapper().eq("id", id);
+        let mut dao = UserDao::find_one(&w).await?;
+        dao.password = hashed_password;
+        UserDao::update_one(&dao, &w).await?;
         Ok(dao.into())
     }
 }

@@ -4,7 +4,7 @@ use validator::Validate;
 
 use crate::{
     repository::{
-        dto::{LoginUser, NewUser, UserGrantRole},
+        dto::{ConnectUser, LoginUser, NewUser, UserGrantRole},
         vo::{Domain, Org, Role, User, UserOrg, UserRole},
     },
     util::{
@@ -123,8 +123,80 @@ async fn login(
     }))
 }
 
+async fn connect(
+    Query(query): Query<HashMap<String, String>>,
+    Json(body): Json<ConnectUser>,
+) -> APIResult {
+    body.validate()?;
+    let domain = match query.get("from") {
+        Some(domain_id) => {
+            let domain = match Domain::find_one(domain_id.clone()).await {
+                Ok(val) => val,
+                Err(_) => return Err(reject!(format!("来源域 {} 不存在", domain_id))),
+            };
+            domain
+        }
+        None => return Err(reject!("来源域不能为空")),
+    };
+    let user: User;
+    let mut roles: Vec<Role>;
+    let role_ids: Vec<i32>;
+    let role_level: i32;
+    let orgs: Vec<Org>;
+    let org_ids: Vec<String>;
+    if let Ok(dao) = body.exists().await {
+        user = dao.into();
+        let user_orgs = UserOrg::find_by_user(user.id.clone()).await?;
+        org_ids = user_orgs.iter().map(|v| v.org_id.clone()).collect();
+        orgs = Org::find_by_ids(org_ids.clone(), Some(domain.id.clone())).await?;
+
+        let user_roles = UserRole::find_by_user(user.id.clone()).await?;
+        role_ids = user_roles.iter().map(|v| v.role_id).collect();
+        roles = Role::find_by_ids(role_ids.clone(), Some(domain.id.clone())).await?;
+        roles.sort_by(|a, b| a.level.cmp(&b.level));
+        role_level = if roles.len() > 0 { roles[0].level } else { 999 };
+    } else {
+        user = body.create().await?;
+        let role = match domain.default_role_id {
+            Some(role_id) => {
+                let role = Role::find_one(role_id).await?;
+                role
+            }
+            None => {
+                return Err(reject!(format!(
+                    "来源域 {} 没有默认角色",
+                    domain.id.clone()
+                )))
+            }
+        };
+        roles = vec![role.clone()];
+        role_ids = vec![role.id.unwrap()];
+        role_level = role.level;
+        org_ids = vec![];
+        orgs = vec![];
+        let user_grant_role = UserGrantRole {
+            user_id: user.id.clone(),
+            role_id: role.id.unwrap(),
+        };
+        user_grant_role.save().await?;
+    };
+    let token = jwt::generate_token(Auth {
+        id: user.id.clone(),
+        username: user.username.clone(),
+        domain_id: Some(domain.id.clone()),
+        role_id: role_ids,
+        org_id: org_ids,
+        role_level,
+        is_admin: false,
+    });
+    Ok(reply!({
+      "token": token, "user": user,"domain": domain, "roles": roles, "orgs": orgs
+    }))
+}
+
 pub fn apply_routes(v1: Router<BoxRoute>) -> Router<BoxRoute> {
     v1.route("/register", post(register))
         .route("/login", post(login))
+        .route("/connect", post(connect))
         .boxed()
 }
