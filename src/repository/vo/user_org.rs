@@ -31,4 +31,10 @@ impl UserOrg {
         let all: Vec<Self> = all.iter().map(|v| v.clone().into()).collect();
         Ok(all)
     }
+    pub async fn find_by_org(org_id: String) -> Result<Vec<Self>, DBError> {
+        let w = POOL.new_wrapper().eq("org_id", org_id);
+        let all = UserOrgDao::find_list(&w).await?;
+        let all: Vec<Self> = all.iter().map(|v| v.clone().into()).collect();
+        Ok(all)
+    }
 }

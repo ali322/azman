@@ -30,7 +30,7 @@ async fn all(Extension(auth): Extension<Auth>) -> APIResult {
 }
 
 async fn one(Path(id): Path<String>) -> APIResult {
-    let one = Org::find_one(id).await?;
+    let one = Org::find_one(&id).await?;
     Ok(reply!(one))
 }
 
@@ -61,7 +61,7 @@ async fn update(
         Some(val) => val,
         None => return Err(reject!("来源域不能为空")),
     };
-    let found = Org::find_one(id.clone()).await?;
+    let found = Org::find_one(&id).await?;
     if !auth.is_admin {
         if auth.role_level > 1 {
             return Err(reject!(format!("仅域管理员可操作")));
@@ -80,7 +80,7 @@ async fn join(Json(body): Json<UserJoinOrg>, Extension(auth): Extension<Auth>) -
         Some(val) => val,
         None => return Err(reject!("来源域不能为空")),
     };
-    let found = Org::find_one(body.org_id.clone()).await?;
+    let found = Org::find_one(&body.org_id).await?;
     if !auth.is_admin {
         if auth.role_level > 1 {
             return Err(reject!(format!("仅域管理员可操作")));
@@ -98,7 +98,7 @@ async fn leave(Json(body): Json<UserLeaveOrg>, Extension(auth): Extension<Auth>)
         Some(val) => val,
         None => return Err(reject!("来源域不能为空")),
     };
-    let found = Org::find_one(body.org_id.clone()).await?;
+    let found = Org::find_one(&body.org_id).await?;
     if !auth.is_admin {
         if auth.role_level > 1 {
             return Err(reject!(format!("仅域管理员可操作")));

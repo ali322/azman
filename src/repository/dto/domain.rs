@@ -1,4 +1,4 @@
-use crate::repository::{DBError, POOL, dao::{DomainDao, RoleDao}, dto::NewRole, vo::Domain};
+use crate::repository::{DBError, POOL, dao::{DomainDao, RoleDao}, vo::Domain};
 use app_macro::Dao;
 use chrono::{Local, NaiveDateTime};
 use rbatis::crud::CRUDMut;
