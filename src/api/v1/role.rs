@@ -8,7 +8,7 @@ use tower_http::auth::RequireAuthorizationLayer;
 
 use crate::{
     repository::{
-        dto::{NewRole, UpdateRole, UserGrantRole, UserRevokeRole},
+        dto::{NewRole, UpdateRole, UpdateUserRole, UserChangeRole, UserGrantRole, UserRevokeRole},
         vo::{Domain, Role},
     },
     util::{jwt::Auth, restrict::Restrict, APIResult},
@@ -117,12 +117,42 @@ async fn revoke(Json(body): Json<UserRevokeRole>, Extension(auth): Extension<Aut
     Ok(reply!(revoked))
 }
 
+async fn change(Json(body): Json<UserChangeRole>, Extension(auth): Extension<Auth>) -> APIResult {
+    if !auth.is_admin {
+        let roles = Role::find_by_ids(body.role_ids.clone(), auth.domain_id).await?;
+        for role in roles {
+            if role.level < auth.role_level {
+                return Err(reject!(format!("角色 {:?} 超过当前角色层级", role.id)));
+            }
+        }
+    }
+    let user_roles = body.save().await?;
+    Ok(reply!(user_roles))
+}
+
+async fn expire(Json(body): Json<UpdateUserRole>, Extension(auth): Extension<Auth>) -> APIResult {
+    if !auth.is_admin {
+        let role = Role::find_one(body.role_id).await?;
+        // let user = guard!(User::find_one(body.user_id, &conn));
+        if role.domain_id != auth.domain_id.unwrap() {
+            return Err(reject!(format!("角色 {:?} 不属于来源域", role.id)));
+        }
+        if role.level < auth.role_level {
+            return Err(reject!(format!("角色 {:?} 超过当前角色层级", role.id)));
+        }
+    }
+    let user_role = body.save().await?;
+    Ok(reply!(user_role))
+}
+
 pub fn apply_routes(v1: Router<BoxRoute>) -> Router<BoxRoute> {
     let restrict_layer = RequireAuthorizationLayer::custom(Restrict::new());
     v1.route("/role", post(create).get(all))
         .route("/role/:id", put(update).get(one).delete(remove))
         .route("/grant/role", post(grant))
         .route("/revoke/role", post(revoke))
+        .route("/change/role", post(change))
+        .route("/expire/role", post(expire))
         .layer(restrict_layer)
         .boxed()
 }
