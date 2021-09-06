@@ -21,15 +21,15 @@ fn now() -> NaiveDateTime {
 }
 
 impl NewOrg {
-    pub async fn create(&self) -> Result<Org, DBError> {
+    pub async fn create(self) -> Result<Org, DBError> {
         let id = Uuid::new_v4().to_string();
         let dao = OrgDao {
             id: id.clone(),
-            name: self.name.clone(),
-            description: self.description.clone(),
-            domain_id: self.domain_id.clone(),
+            name: self.name,
+            description: self.description,
+            domain_id: self.domain_id,
             is_deleted: Some(0),
-            created_by: self.created_by.clone(),
+            created_by: self.created_by,
             updated_by: None,
             created_at: now(),
             updated_at: now(),
@@ -51,11 +51,11 @@ pub struct UpdateOrg {
 }
 
 impl UpdateOrg {
-    pub async fn save(&self, id: String) -> Result<Org, DBError> {
+    pub async fn save(self, id: &str) -> Result<Org, DBError> {
         let w = POOL.new_wrapper().eq("id", id);
         let mut dao = OrgDao::find_one(&w).await?;
-        dao.name = self.name.clone();
-        dao.description = self.description.clone();
+        dao.name = self.name;
+        dao.description = self.description;
         OrgDao::update_one(&dao, &w).await?;
         Ok(dao.into())
     }

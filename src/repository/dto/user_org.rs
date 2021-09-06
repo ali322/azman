@@ -16,10 +16,10 @@ fn default_expire() -> NaiveDateTime {
 }
 
 impl UserJoinOrg {
-    pub async fn save(&self) -> Result<UserOrg, DBError> {
+    pub async fn save(self) -> Result<UserOrg, DBError> {
         let dao = UserOrgDao {
-            user_id: self.user_id.clone(),
-            org_id: self.org_id.clone(),
+            user_id: self.user_id,
+            org_id: self.org_id,
             expire: default_expire(),
         };
         UserOrgDao::create_one(&dao).await?;
@@ -34,12 +34,12 @@ pub struct UserLeaveOrg {
 }
 
 impl UserLeaveOrg {
-    pub async fn save(&self) -> Result<UserOrg, DBError> {
+    pub async fn save(self) -> Result<UserOrg, DBError> {
         let w = POOL
             .new_wrapper()
-            .eq("user_id", self.user_id.clone())
+            .eq("user_id", self.user_id)
             .and()
-            .eq("org_id", self.org_id.clone());
+            .eq("org_id", self.org_id);
         UserOrgDao::delete_one(&w).await?;
         UserOrgDao::find_one(&w).await.map(Into::into)
     }

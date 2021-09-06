@@ -24,16 +24,16 @@ fn now() -> NaiveDateTime {
 }
 
 impl NewRole {
-    pub async fn create(&self) -> Result<Role, DBError> {
+    pub async fn create(self) -> Result<Role, DBError> {
         let mut dao = RoleDao {
             id: None,
-            name: self.name.clone(),
-            description: self.description.clone(),
-            value: self.value.clone(),
+            name: self.name,
+            description: self.description,
+            value: self.value,
             level: self.level,
-            domain_id: self.domain_id.clone(),
+            domain_id: self.domain_id,
             is_deleted: Some(0),
-            created_by: self.created_by.clone(),
+            created_by: self.created_by,
             updated_by: None,
             created_at: now(),
             updated_at: now(),
@@ -58,14 +58,14 @@ pub struct UpdateRole {
 }
 
 impl UpdateRole {
-    pub async fn save(&self, id: i32) -> Result<Role, DBError> {
+    pub async fn save(self, id: i32) -> Result<Role, DBError> {
         let w = POOL.new_wrapper().eq("id", id);
         let mut dao = RoleDao::find_one(&w).await?;
-        dao.name = self.name.clone();
-        dao.description = self.description.clone();
-        dao.value = self.value.clone();
-        dao.level = self.level.clone();
-        dao.updated_by = self.updated_by.clone();
+        dao.name = self.name;
+        dao.description = self.description;
+        dao.value = self.value;
+        dao.level = self.level;
+        dao.updated_by = self.updated_by;
         RoleDao::update_one(&dao, &w).await?;
         Ok(dao.into())
     }

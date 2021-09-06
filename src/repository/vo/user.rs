@@ -41,9 +41,9 @@ impl From<UserDao> for User {
 }
 
 impl User {
-    pub async fn find_one(id: String) -> Result<Self, DBError> {
+    pub async fn find_one(id: &str) -> Result<UserDao, DBError> {
         let w = POOL.new_wrapper().eq("id", id);
-        UserDao::find_one(&w).await.map(Into::into)
+        UserDao::find_one(&w).await
     }
     pub async fn find_all() -> Result<Vec<Self>, DBError> {
         let w = POOL.new_wrapper();
@@ -51,12 +51,22 @@ impl User {
         let all: Vec<Self> = all.iter().map(|v| v.clone().into()).collect();
         Ok(all)
     }
-    pub async fn find_by_ids(
-        ids: Vec<String>,
-    ) -> Result<Vec<Self>, DBError> {
+    pub async fn find_by_ids(ids: Vec<String>) -> Result<Vec<Self>, DBError> {
         let w = POOL.new_wrapper().r#in("id", &ids);
         let all = UserDao::find_list(&w).await?;
         let all: Vec<Self> = all.iter().map(|v| v.clone().into()).collect();
         Ok(all)
+    }
+    pub async fn find_by_username(username: &str) -> Result<Self, DBError> {
+        let w = POOL.new_wrapper().eq("username", username);
+        UserDao::find_one(&w).await.map(Into::into)
+    }
+    pub async fn find_by_username_or_email(username_or_email: &str) -> Result<UserDao, DBError> {
+        let w = POOL
+            .new_wrapper()
+            .eq("username", username_or_email)
+            .or()
+            .eq("email", username_or_email);
+        UserDao::find_one(&w).await
     }
 }

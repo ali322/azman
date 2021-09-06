@@ -20,13 +20,13 @@ async fn all() -> APIResult {
 }
 
 async fn one(Path(id): Path<String>) -> APIResult {
-    let one = User::find_one(id).await?;
+    let one = User::find_one(&id).await?;
     Ok(reply!(one))
 }
 
 async fn update(Path(id): Path<String>, Json(body): Json<UpdateUser>) -> APIResult {
     body.validate()?;
-    let updated = body.save(id).await?;
+    let updated = body.save(&id).await?;
     Ok(reply!(updated))
 }
 
@@ -35,15 +35,14 @@ async fn change_password(
     Extension(auth): Extension<Auth>,
 ) -> APIResult {
     body.validate()?;
-    let user;
-    match User::find_one(auth.id.clone()).await {
-        Ok(val) => user = val,
+    let user = match User::find_one(&auth.id).await {
+        Ok(val) => val,
         Err(_) => return Err(reject!("用户不存在")),
-    }
+    };
     if !body.is_password_matched(&user.password) {
         return Err(reject!("旧密码不正确"));
     }
-    let user = body.change_password(auth.id.clone()).await?;
+    let user = body.change_password(&user).await?;
     Ok(reply!(user))
 }
 
@@ -56,10 +55,11 @@ async fn reset_password(
         return Err(reject!("仅管理员可访问"));
     }
     body.validate()?;
-    if User::find_one(id.clone()).await.is_err() {
-        return Err(reject!("用户不存在"));
-    }
-    let user = body.reset_password(id).await?;
+    let user = match User::find_one(&id).await {
+        Ok(val) => val,
+        Err(_) => return Err(reject!("用户不存在")),
+    };
+    let user = body.reset_password(&user).await?;
     Ok(reply!(user))
 }
 

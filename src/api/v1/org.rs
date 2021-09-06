@@ -21,8 +21,8 @@ async fn all(Extension(auth): Extension<Auth>) -> APIResult {
             Some(val) => val,
             None => return Err(reject!("来源域不能为空")),
         };
-        if Domain::find_one(domain_id.clone()).await.is_err() {
-            return Err(reject!(format!("来源域 {} 不存在", domain_id.clone())));
+        if Domain::find_one(&domain_id).await.is_err() {
+            return Err(reject!(format!("来源域 {} 不存在", &domain_id)));
         }
     }
     let all = Org::find_all().await?;
@@ -40,8 +40,8 @@ async fn create(Json(body): Json<NewOrg>, Extension(auth): Extension<Auth>) -> A
         None => return Err(reject!("来源域不能为空")),
     };
     if !auth.is_admin {
-        if Domain::find_one(domain_id.clone()).await.is_err() {
-            return Err(reject!(format!("来源域 {} 不存在", domain_id.clone())));
+        if Domain::find_one(&domain_id).await.is_err() {
+            return Err(reject!(format!("来源域 {} 不存在", &domain_id)));
         }
         if auth.role_level > 1 {
             return Err(reject!(format!("仅域管理员可操作")));
@@ -71,7 +71,7 @@ async fn update(
         }
     }
     body.validate()?;
-    let updated = body.save(id).await?;
+    let updated = body.save(&id).await?;
     Ok(reply!(updated))
 }
 

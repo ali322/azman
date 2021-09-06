@@ -10,10 +10,10 @@ pub struct RoleGrantPerm {
 }
 
 impl RoleGrantPerm {
-    pub async fn save(&self) -> Result<RolePerm, DBError> {
+    pub async fn save(self) -> Result<RolePerm, DBError> {
         let dao = RolePermDao {
-            role_id: self.role_id.clone(),
-            perm_id: self.perm_id.clone(),
+            role_id: self.role_id,
+            perm_id: self.perm_id,
         };
         RolePermDao::create_one(&dao).await?;
         Ok(dao.into())
@@ -27,12 +27,12 @@ pub struct RoleRevokePerm {
 }
 
 impl RoleRevokePerm {
-    pub async fn save(&self) -> Result<RolePerm, DBError> {
+    pub async fn save(self) -> Result<RolePerm, DBError> {
         let w = POOL
             .new_wrapper()
-            .eq("perm_id", self.perm_id.clone())
+            .eq("perm_id", self.perm_id)
             .and()
-            .eq("role_id", self.role_id.clone());
+            .eq("role_id", self.role_id);
         RolePermDao::delete_one(&w).await?;
         RolePermDao::find_one(&w).await.map(Into::into)
     }

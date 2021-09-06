@@ -21,7 +21,7 @@ fn now() -> NaiveDateTime {
 }
 
 impl NewDomain {
-    pub async fn create(&self, user_id: String) -> Result<Domain, DBError> {
+    pub async fn create(self, user_id: &str) -> Result<Domain, DBError> {
         let id = Uuid::new_v4().to_string();
         let admin_role_name =
             env::var("ADMIN_ROLE_NAME").expect("environment variable ADMIN_ROLE_NAME must be set");
@@ -38,8 +38,8 @@ impl NewDomain {
             domain_id: id.clone(),
             created_at: now(),
             updated_at: now(),
-            created_by: Some(user_id.clone()),
-            updated_by: Some(user_id.clone()),
+            created_by: Some(user_id.to_string()),
+            updated_by: Some(user_id.to_string()),
         };
         let created = tx.save(&new_role, &[]).await?;
         let admin_role_id = created.last_insert_id.unwrap();
@@ -53,15 +53,15 @@ impl NewDomain {
           domain_id: id.clone(),
           created_at: now(),
           updated_at: now(),
-          created_by: Some(user_id.clone()),
-          updated_by: Some(user_id.clone()),
+          created_by: Some(user_id.to_string()),
+          updated_by: Some(user_id.to_string()),
       };
       let created = tx.save(&new_role, &[]).await?;
       let common_role_id = created.last_insert_id.unwrap();
         let dao = DomainDao {
             id: id.clone(),
-            name: self.name.clone(),
-            description: self.description.clone(),
+            name: self.name,
+            description: self.description,
             default_role_id: Some(common_role_id as i32),
             admin_role_id: Some(admin_role_id as i32),
             is_deleted: Some(0),
@@ -83,11 +83,11 @@ pub struct UpdateDomain {
 }
 
 impl UpdateDomain {
-    pub async fn save(&self, id: String) -> Result<Domain, DBError> {
+    pub async fn save(self, id: &str) -> Result<Domain, DBError> {
         let w = POOL.new_wrapper().eq("id", id);
         let mut dao = DomainDao::find_one(&w).await?;
-        dao.name = self.name.clone();
-        dao.description = self.description.clone();
+        dao.name = self.name;
+        dao.description = self.description;
         DomainDao::update_one(&dao, &w).await?;
         Ok(dao.into())
     }

@@ -22,15 +22,15 @@ fn now() -> NaiveDateTime {
 }
 
 impl NewPerm {
-    pub async fn create(&self) -> Result<Perm, DBError> {
+    pub async fn create(self) -> Result<Perm, DBError> {
         let mut dao = PermDao {
             id: None,
-            name: self.name.clone(),
-            description: self.description.clone(),
-            value: self.value.clone(),
-            domain_id: self.domain_id.clone(),
+            name: self.name,
+            description: self.description,
+            value: self.value,
+            domain_id: self.domain_id,
             is_deleted: Some(0),
-            created_by: self.created_by.clone(),
+            created_by: self.created_by,
             updated_by: None,
             created_at: now(),
             updated_at: now(),
@@ -53,12 +53,12 @@ pub struct UpdatePerm {
 }
 
 impl UpdatePerm {
-    pub async fn save(&self, id: i32) -> Result<Perm, DBError> {
+    pub async fn save(self, id: i32) -> Result<Perm, DBError> {
         let w = POOL.new_wrapper().eq("id", id);
         let mut dao = PermDao::find_one(&w).await?;
-        dao.name = self.name.clone();
-        dao.description = self.description.clone();
-        dao.value = self.value.clone();
+        dao.name = self.name;
+        dao.description = self.description;
+        dao.value = self.value;
         PermDao::update_one(&dao, &w).await?;
         Ok(dao.into())
     }

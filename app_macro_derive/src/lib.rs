@@ -16,7 +16,7 @@ fn impl_dao(ast: &syn::DeriveInput) -> TokenStream {
       #[async_trait]
       impl Dao for #name{
         async fn find_one(w: &Wrapper) -> Result<Self, DBError> {
-          let w = w.clone().order_by(true, &["id"]).limit(1);
+          let w = w.to_owned().order_by(true, &["id"]).limit(1);
           POOL.fetch_by_wrapper::<Self>(&w).await
         }
         async fn find_list(w: &Wrapper) -> Result<Vec<Self>, DBError> {

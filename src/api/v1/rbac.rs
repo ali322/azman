@@ -27,7 +27,7 @@ async fn access(Json(body): Json<Access>, Extension(auth): Extension<Auth>) -> A
             role_perms.iter().any(|v| v.perm_id == perm.id.unwrap()),
         );
     }
-    let user_role = UserRole::find_one(auth.id, body.role_id).await;
+    let user_role = UserRole::find_one(&auth.id, body.role_id).await;
     if user_role.is_err() {
         for (_, item) in perm_map.iter_mut() {
             *item = false
@@ -37,11 +37,11 @@ async fn access(Json(body): Json<Access>, Extension(auth): Extension<Auth>) -> A
 }
 
 async fn roles_of_user(Path(id): Path<String>, Extension(auth): Extension<Auth>) -> APIResult {
-    match User::find_one(id.clone()).await {
+    match User::find_one(&id).await {
         Ok(_) => (),
-        Err(_) => return Err(reject!(format!("用户 {} 不存在", id.clone()))),
+        Err(_) => return Err(reject!(format!("用户 {} 不存在", &id))),
     };
-    let user_roles = UserRole::find_by_user(id).await?;
+    let user_roles = UserRole::find_by_user(&id).await?;
     let role_ids: Vec<i32> = user_roles.iter().map(|v| v.role_id).collect();
     let domain_id = if auth.is_admin { None } else { auth.domain_id };
     let roles = Role::find_by_ids(role_ids, domain_id).await?;
@@ -72,11 +72,11 @@ async fn perms_of_role(Path(id): Path<i32>, Extension(auth): Extension<Auth>) ->
 }
 
 async fn orgs_of_user(Path(id): Path<String>, Extension(auth): Extension<Auth>) -> APIResult {
-    match User::find_one(id.clone()).await {
+    match User::find_one(&id).await {
         Ok(_) => (),
-        Err(_) => return Err(reject!(format!("用户 {} 不存在", id.clone()))),
+        Err(_) => return Err(reject!(format!("用户 {} 不存在", &id))),
     };
-    let user_orgs = UserOrg::find_by_user(id).await?;
+    let user_orgs = UserOrg::find_by_user(&id).await?;
     let org_ids: Vec<String> = user_orgs.iter().map(|v| v.org_id.clone()).collect();
     let domain_id = if auth.is_admin { None } else { auth.domain_id };
     let orgs = Org::find_by_ids(org_ids, domain_id).await?;
@@ -86,9 +86,9 @@ async fn orgs_of_user(Path(id): Path<String>, Extension(auth): Extension<Auth>) 
 async fn users_of_org(Path(id): Path<String>) -> APIResult {
     match Org::find_one(&id).await {
         Ok(_) => (),
-        Err(_) => return Err(reject!(format!("组织 {} 不存在", id.clone()))),
+        Err(_) => return Err(reject!(format!("组织 {} 不存在", &id))),
     };
-    let user_orgs = UserOrg::find_by_org(id).await?;
+    let user_orgs = UserOrg::find_by_org(&id).await?;
     let user_ids: Vec<String> = user_orgs.iter().map(|v| v.user_id.clone()).collect();
     let users = User::find_by_ids(user_ids).await?;
     Ok(reply!(users))

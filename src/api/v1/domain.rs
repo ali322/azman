@@ -24,7 +24,7 @@ async fn all(Extension(auth): Extension<Auth>) -> APIResult {
 }
 
 async fn one(Path(id): Path<String>) -> APIResult {
-    let one = Domain::find_one(id).await?;
+    let one = Domain::find_one(&id).await?;
     Ok(reply!(one))
 }
 
@@ -33,7 +33,7 @@ async fn create(Json(body): Json<NewDomain>, Extension(auth): Extension<Auth>) -
         return Err(reject!("仅管理员可访问"));
     }
     body.validate()?;
-    let created = body.create(auth.id).await?;
+    let created = body.create(&auth.id).await?;
     Ok(reply!(created))
 }
 
@@ -46,7 +46,7 @@ async fn update(
         return Err(reject!("仅管理员可访问"));
     }
     body.validate()?;
-    let updated = body.save(id).await?;
+    let updated = body.save(&id).await?;
     Ok(reply!(updated))
 }
 

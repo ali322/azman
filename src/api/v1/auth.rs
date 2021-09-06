@@ -18,12 +18,12 @@ async fn register(
     Json(body): Json<NewUser>,
 ) -> APIResult {
     body.validate()?;
-    if body.exists().await.is_ok() {
+    if User::find_by_username(&body.username).await.is_ok() {
         return Err(reject!("用户已存在"));
     }
     let domain = match query.get("from") {
         Some(domain_id) => {
-            let domain = match Domain::find_one(domain_id.clone()).await {
+            let domain = match Domain::find_one(&domain_id).await {
                 Ok(val) => val,
                 Err(_) => return Err(reject!(format!("来源域 {} 不存在", domain_id))),
             };
@@ -68,15 +68,14 @@ async fn login(
     Json(body): Json<LoginUser>,
 ) -> APIResult {
     body.validate()?;
-    let user_dao = match body.find_one().await {
+    let user_dao = match User::find_by_username_or_email(&body.username_or_email).await {
         Ok(val) => val,
         Err(_) => return Err(reject!("用户不存在")),
     };
-    let user: User = user_dao.clone().into();
-    if !body.is_password_matched(&user.password) {
+    if !body.is_password_matched(&user_dao.password) {
         return Err(reject!("密码不正确"));
     }
-    if !user.is_actived {
+    if user_dao.is_actived == Some(0) {
         return Err(reject!("用户被禁用"));
     }
 
@@ -91,7 +90,7 @@ async fn login(
     if !is_admin {
         domain = match domain_id.clone() {
             Some(v) => {
-                let domain = match Domain::find_one(v.clone()).await {
+                let domain = match Domain::find_one(&v).await {
                     Ok(val) => val,
                     Err(_) => return Err(reject!(format!("来源域 {} 不存在", v.clone()))),
                 };
@@ -99,11 +98,11 @@ async fn login(
             }
             None => return Err(reject!("来源域不能为空")),
         };
-        let user_orgs = UserOrg::find_by_user(user.id.clone()).await?;
+        let user_orgs = UserOrg::find_by_user(&user.id).await?;
         org_ids = user_orgs.iter().map(|v| v.org_id.clone()).collect();
         orgs = Org::find_by_ids(org_ids.clone(), domain_id.clone()).await?;
 
-        let user_roles = UserRole::find_by_user(user.id.clone()).await?;
+        let user_roles = UserRole::find_by_user(&user.id).await?;
         role_ids = user_roles.iter().map(|v| v.role_id).collect();
         roles = Role::find_by_ids(role_ids.clone(), domain_id.clone()).await?;
         roles.sort_by(|a, b| a.level.cmp(&b.level));
@@ -130,7 +129,7 @@ async fn connect(
     body.validate()?;
     let domain = match query.get("from") {
         Some(domain_id) => {
-            let domain = match Domain::find_one(domain_id.clone()).await {
+            let domain = match Domain::find_one(&domain_id).await {
                 Ok(val) => val,
                 Err(_) => return Err(reject!(format!("来源域 {} 不存在", domain_id))),
             };
@@ -144,13 +143,13 @@ async fn connect(
     let role_level: i32;
     let orgs: Vec<Org>;
     let org_ids: Vec<String>;
-    if let Ok(dao) = body.exists().await {
-        user = dao.into();
-        let user_orgs = UserOrg::find_by_user(user.id.clone()).await?;
+    if let Ok(val) = User::find_by_username(&body.username).await {
+        user = val;
+        let user_orgs = UserOrg::find_by_user(&user.id).await?;
         org_ids = user_orgs.iter().map(|v| v.org_id.clone()).collect();
         orgs = Org::find_by_ids(org_ids.clone(), Some(domain.id.clone())).await?;
 
-        let user_roles = UserRole::find_by_user(user.id.clone()).await?;
+        let user_roles = UserRole::find_by_user(&user.id).await?;
         role_ids = user_roles.iter().map(|v| v.role_id).collect();
         roles = Role::find_by_ids(role_ids.clone(), Some(domain.id.clone())).await?;
         roles.sort_by(|a, b| a.level.cmp(&b.level));

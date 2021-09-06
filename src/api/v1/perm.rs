@@ -31,7 +31,7 @@ async fn create(Json(body): Json<NewPerm>, Extension(auth): Extension<Auth>) -> 
         None => return Err(reject!("来源域不能为空")),
     };
     if !auth.is_admin {
-        if Domain::find_one(domain_id.clone()).await.is_err() {
+        if Domain::find_one(&domain_id).await.is_err() {
             return Err(reject!(format!("来源域 {} 不存在", domain_id.clone())));
         }
         if auth.role_level > 1 {

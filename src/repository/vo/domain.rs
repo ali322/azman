@@ -36,7 +36,7 @@ impl From<DomainDao> for Domain {
 }
 
 impl Domain {
-    pub async fn find_one(id: String) -> Result<Self, DBError> {
+    pub async fn find_one(id: &str) -> Result<Self, DBError> {
         let w = POOL.new_wrapper().eq("id", id);
         DomainDao::find_one(&w).await.map(Into::into)
     }
@@ -46,8 +46,8 @@ impl Domain {
         let all: Vec<Self> = all.iter().map(|v| v.clone().into()).collect();
         Ok(all)
     }
-    pub async fn delete_one(id: String) -> Result<Self, DBError> {
-        let w = POOL.new_wrapper().eq("id", id.clone());
+    pub async fn delete_one(id: &str) -> Result<Self, DBError> {
+        let w = POOL.new_wrapper().eq("id", id);
         DomainDao::delete_one(&w).await?;
         Self::find_one(id).await
     }

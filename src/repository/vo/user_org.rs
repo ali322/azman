@@ -25,16 +25,16 @@ impl From<UserOrgDao> for UserOrg {
 }
 
 impl UserOrg {
-    pub async fn find_by_user(user_id: String) -> Result<Vec<Self>, DBError> {
+    pub async fn find_by_user(user_id: &str) -> Result<Vec<Self>, DBError> {
         let w = POOL.new_wrapper().eq("user_id", user_id);
         let all = UserOrgDao::find_list(&w).await?;
-        let all: Vec<Self> = all.iter().map(|v| v.clone().into()).collect();
+        let all: Vec<Self> = all.into_iter().map(|v| v.into()).collect();
         Ok(all)
     }
-    pub async fn find_by_org(org_id: String) -> Result<Vec<Self>, DBError> {
+    pub async fn find_by_org(org_id: &str) -> Result<Vec<Self>, DBError> {
         let w = POOL.new_wrapper().eq("org_id", org_id);
         let all = UserOrgDao::find_list(&w).await?;
-        let all: Vec<Self> = all.iter().map(|v| v.clone().into()).collect();
+        let all: Vec<Self> = all.into_iter().map(|v| v.into()).collect();
         Ok(all)
     }
 }
