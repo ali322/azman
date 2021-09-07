@@ -9,14 +9,24 @@ use tower_http::auth::RequireAuthorizationLayer;
 use crate::{
     repository::{
         dto::{NewPerm, RoleGrantPerm, RoleRevokePerm, UpdatePerm},
-        vo::{Domain, Perm, Role},
+        vo::{Domain, Perm, Role, RolePerm},
     },
     util::{jwt::Auth, restrict::Restrict, APIResult},
 };
 use validator::Validate;
 
-async fn all() -> APIResult {
-    let all = Perm::find_all().await?;
+async fn all(Extension(auth): Extension<Auth>) -> APIResult {
+    if !auth.is_admin {
+        if auth.domain_id.is_none() {
+            return Err(reject!("来源域不能为空"));
+        }
+        let domain_id = auth.domain_id.clone().unwrap();
+        if Domain::find_one(&domain_id).await.is_err() {
+            return Err(reject!(format!("来源域 {} 不存在", &domain_id)));
+        }
+    }
+    let domain_id = if auth.is_admin { None } else { auth.domain_id };
+    let all = Perm::find_all(domain_id).await?;
     Ok(reply!(all))
 }
 
@@ -25,7 +35,7 @@ async fn one(Path(id): Path<i32>) -> APIResult {
     Ok(reply!(one))
 }
 
-async fn create(Json(body): Json<NewPerm>, Extension(auth): Extension<Auth>) -> APIResult {
+async fn create(Json(mut body): Json<NewPerm>, Extension(auth): Extension<Auth>) -> APIResult {
     let domain_id = match auth.domain_id {
         Some(val) => val,
         None => return Err(reject!("来源域不能为空")),
@@ -39,13 +49,15 @@ async fn create(Json(body): Json<NewPerm>, Extension(auth): Extension<Auth>) -> 
         }
     }
     body.validate()?;
+    body.created_by = Some(auth.id);
+    body.domain_id = domain_id;
     let created = body.create().await?;
     Ok(reply!(created))
 }
 
 async fn update(
     Path(id): Path<i32>,
-    Json(body): Json<UpdatePerm>,
+    Json(mut body): Json<UpdatePerm>,
     Extension(auth): Extension<Auth>,
 ) -> APIResult {
     let domain_id = match auth.domain_id {
@@ -62,6 +74,7 @@ async fn update(
         }
     }
     body.validate()?;
+    body.updated_by = Some(auth.id);
     let updated = body.save(id).await?;
     Ok(reply!(updated))
 }
@@ -83,6 +96,12 @@ async fn grant(Json(body): Json<RoleGrantPerm>, Extension(auth): Extension<Auth>
             return Err(reject!(format!("仅域管理员可操作")));
         }
     }
+    if RolePerm::find_one(body.role_id, body.perm_id).await.is_ok() {
+        return Err(reject!(format!(
+            "角色 {} 已赋予权限 {}",
+            body.role_id, body.perm_id
+        )));
+    }
     let granted = body.save().await?;
     Ok(reply!(granted))
 }
@@ -103,6 +122,15 @@ async fn revoke(Json(body): Json<RoleRevokePerm>, Extension(auth): Extension<Aut
         if auth.role_level > 1 {
             return Err(reject!(format!("仅域管理员可操作")));
         }
+    }
+    if RolePerm::find_one(body.role_id, body.perm_id)
+        .await
+        .is_err()
+    {
+        return Err(reject!(format!(
+            "角色 {} 未赋予权限 {}",
+            body.role_id, body.perm_id
+        )));
     }
     let revoked = body.save().await?;
     Ok(reply!(revoked))

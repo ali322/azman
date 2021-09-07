@@ -1,9 +1,9 @@
 use crate::repository::{DBError, POOL};
-use chrono::NaiveDateTime;
-use rbatis::{crud::CRUD, wrapper::Wrapper};
 use app_macro::Dao;
 use app_macro_derive::Dao;
 use async_trait::async_trait;
+use chrono::NaiveDateTime;
+use rbatis::{crud::CRUD, wrapper::Wrapper};
 
 #[crud_table(table_name: "users")]
 #[derive(Debug, Clone, Dao)]

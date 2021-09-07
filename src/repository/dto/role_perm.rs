@@ -27,13 +27,12 @@ pub struct RoleRevokePerm {
 }
 
 impl RoleRevokePerm {
-    pub async fn save(self) -> Result<RolePerm, DBError> {
+    pub async fn save(self) -> Result<u64, DBError> {
         let w = POOL
             .new_wrapper()
             .eq("perm_id", self.perm_id)
             .and()
             .eq("role_id", self.role_id);
-        RolePermDao::delete_one(&w).await?;
-        RolePermDao::find_one(&w).await.map(Into::into)
+        RolePermDao::delete_one(&w).await
     }
 }

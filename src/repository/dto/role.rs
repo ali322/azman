@@ -33,8 +33,8 @@ impl NewRole {
             level: self.level,
             domain_id: self.domain_id,
             is_deleted: Some(0),
-            created_by: self.created_by,
-            updated_by: None,
+            created_by: self.created_by.clone(),
+            updated_by: self.created_by,
             created_at: now(),
             updated_at: now(),
         };

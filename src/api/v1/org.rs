@@ -8,7 +8,7 @@ use axum::{
 use crate::{
     repository::{
         dto::{NewOrg, UpdateOrg, UserJoinOrg, UserLeaveOrg},
-        vo::{Domain, Org},
+        vo::{Domain, Org, UserOrg},
     },
     util::{jwt::Auth, restrict::Restrict, APIResult},
 };
@@ -17,15 +17,16 @@ use validator::Validate;
 
 async fn all(Extension(auth): Extension<Auth>) -> APIResult {
     if !auth.is_admin {
-        let domain_id = match auth.domain_id {
-            Some(val) => val,
-            None => return Err(reject!("来源域不能为空")),
-        };
+        if auth.domain_id.is_none() {
+            return Err(reject!("来源域不能为空"));
+        }
+        let domain_id = auth.domain_id.clone().unwrap();
         if Domain::find_one(&domain_id).await.is_err() {
             return Err(reject!(format!("来源域 {} 不存在", &domain_id)));
         }
     }
-    let all = Org::find_all().await?;
+    let domain_id = if auth.is_admin { None } else { auth.domain_id };
+    let all = Org::find_all(domain_id).await?;
     Ok(reply!(all))
 }
 
@@ -34,7 +35,7 @@ async fn one(Path(id): Path<String>) -> APIResult {
     Ok(reply!(one))
 }
 
-async fn create(Json(body): Json<NewOrg>, Extension(auth): Extension<Auth>) -> APIResult {
+async fn create(Json(mut body): Json<NewOrg>, Extension(auth): Extension<Auth>) -> APIResult {
     let domain_id = match auth.domain_id {
         Some(val) => val,
         None => return Err(reject!("来源域不能为空")),
@@ -48,6 +49,8 @@ async fn create(Json(body): Json<NewOrg>, Extension(auth): Extension<Auth>) -> A
         }
     }
     body.validate()?;
+    body.domain_id = domain_id;
+    body.created_by = Some(auth.id);
     let created = body.create().await?;
     Ok(reply!(created))
 }
@@ -89,6 +92,12 @@ async fn join(Json(body): Json<UserJoinOrg>, Extension(auth): Extension<Auth>) -
             return Err(reject!(format!("组织 {:?} 不属于来源域", found.id)));
         }
     }
+    if UserOrg::find_one(&body.user_id, &body.org_id).await.is_ok() {
+        return Err(reject!(format!(
+            "用户 {} 已加入组织 {}",
+            &body.user_id, &body.org_id
+        )));
+    }
     let joined = body.save().await?;
     Ok(reply!(joined))
 }
@@ -106,6 +115,15 @@ async fn leave(Json(body): Json<UserLeaveOrg>, Extension(auth): Extension<Auth>)
         if found.domain_id != domain_id {
             return Err(reject!(format!("组织 {:?} 不属于来源域", found.id)));
         }
+    }
+    if UserOrg::find_one(&body.user_id, &body.org_id)
+        .await
+        .is_err()
+    {
+        return Err(reject!(format!(
+            "用户 {} 未加入组织 {}",
+            &body.user_id, &body.org_id
+        )));
     }
     let left = body.save().await?;
     Ok(reply!(left))

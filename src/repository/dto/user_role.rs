@@ -4,7 +4,7 @@ use crate::{
 };
 use app_macro::Dao;
 use chrono::{Duration, Local, NaiveDateTime};
-use rbatis::crud::{CRUDMut, CRUD};
+use rbatis::crud::CRUDMut;
 use serde::{Deserialize, Serialize};
 use validator::Validate;
 
@@ -59,14 +59,13 @@ pub struct UserRevokeRole {
 }
 
 impl UserRevokeRole {
-    pub async fn save(self) -> Result<UserRole, DBError> {
+    pub async fn save(self) -> Result<u64, DBError> {
         let w = POOL
             .new_wrapper()
             .eq("user_id", self.user_id)
             .and()
             .eq("role_id", self.role_id);
-        UserRoleDao::delete_one(&w).await?;
-        UserRoleDao::find_one(&w).await.map(Into::into)
+        UserRoleDao::delete_one(&w).await
     }
 }
 

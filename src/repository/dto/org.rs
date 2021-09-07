@@ -29,8 +29,8 @@ impl NewOrg {
             description: self.description,
             domain_id: self.domain_id,
             is_deleted: Some(0),
-            created_by: self.created_by,
-            updated_by: None,
+            created_by: self.created_by.clone(),
+            updated_by: self.created_by,
             created_at: now(),
             updated_at: now(),
         };
@@ -42,10 +42,8 @@ impl NewOrg {
 #[derive(Debug, Clone, Deserialize, Validate)]
 pub struct UpdateOrg {
     #[validate(length(min = 1, max = 100))]
-    pub name: String,
+    pub name: Option<String>,
     pub description: Option<String>,
-    #[validate(length(min = 1, max = 200))]
-    pub value: String,
     #[serde(skip_deserializing)]
     pub updated_by: Option<String>,
 }
@@ -54,7 +52,9 @@ impl UpdateOrg {
     pub async fn save(self, id: &str) -> Result<Org, DBError> {
         let w = POOL.new_wrapper().eq("id", id);
         let mut dao = OrgDao::find_one(&w).await?;
-        dao.name = self.name;
+        if let Some(name) = self.name {
+            dao.name = name;
+        }
         dao.description = self.description;
         OrgDao::update_one(&dao, &w).await?;
         Ok(dao.into())

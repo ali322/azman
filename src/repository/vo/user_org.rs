@@ -4,6 +4,7 @@ use crate::{
 };
 use app_macro::Dao;
 use chrono::NaiveDateTime;
+use rbatis::crud::CRUD;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -36,5 +37,13 @@ impl UserOrg {
         let all = UserOrgDao::find_list(&w).await?;
         let all: Vec<Self> = all.into_iter().map(|v| v.into()).collect();
         Ok(all)
+    }
+    pub async fn find_one(user_id: &str, org_id: &str) -> Result<UserOrgDao, DBError> {
+      let w = POOL
+            .new_wrapper()
+            .eq("user_id", user_id)
+            .and()
+            .eq("org_id", org_id);
+      POOL.fetch_by_wrapper(&w).await
     }
 }

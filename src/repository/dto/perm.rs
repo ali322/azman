@@ -30,8 +30,8 @@ impl NewPerm {
             value: self.value,
             domain_id: self.domain_id,
             is_deleted: Some(0),
-            created_by: self.created_by,
-            updated_by: None,
+            created_by: self.created_by.clone(),
+            updated_by: self.created_by,
             created_at: now(),
             updated_at: now(),
         };
@@ -49,7 +49,7 @@ pub struct UpdatePerm {
     #[validate(length(min = 1, max = 200))]
     pub value: String,
     #[serde(skip_deserializing)]
-    pub created_by: Option<String>,
+    pub updated_by: Option<String>,
 }
 
 impl UpdatePerm {
@@ -59,6 +59,7 @@ impl UpdatePerm {
         dao.name = self.name;
         dao.description = self.description;
         dao.value = self.value;
+        dao.updated_by = self.updated_by;
         PermDao::update_one(&dao, &w).await?;
         Ok(dao.into())
     }

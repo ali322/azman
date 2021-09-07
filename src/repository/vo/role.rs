@@ -46,8 +46,11 @@ impl Role {
         let w = POOL.new_wrapper().eq("id", id);
         RoleDao::find_one(&w).await.map(Into::into)
     }
-    pub async fn find_all() -> Result<Vec<Self>, DBError> {
-        let w = POOL.new_wrapper();
+    pub async fn find_all(domain_id: Option<String>) -> Result<Vec<Self>, DBError> {
+        let mut w = POOL.new_wrapper();
+        if let Some(domain_id) = domain_id {
+          w = w.eq("domain_id", domain_id);
+        }
         let all = RoleDao::find_list(&w).await?;
         let all: Vec<Self> = all.iter().map(|v| v.clone().into()).collect();
         Ok(all)

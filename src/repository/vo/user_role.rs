@@ -4,6 +4,7 @@ use crate::{
 };
 use app_macro::Dao;
 use chrono::NaiveDateTime;
+use rbatis::crud::CRUD;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -42,7 +43,7 @@ impl UserRole {
             .new_wrapper()
             .eq("user_id", user_id)
             .and()
-            .eq("role_id", role_id);
-        UserRoleDao::find_one(&w).await.map(Into::into)
+            .eq("role_id", role_id).limit(1);
+        POOL.fetch_by_wrapper::<UserRoleDao>(&w).await.map(Into::into)
     }
 }

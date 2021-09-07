@@ -44,7 +44,11 @@ async fn roles_of_user(Path(id): Path<String>, Extension(auth): Extension<Auth>)
     let user_roles = UserRole::find_by_user(&id).await?;
     let role_ids: Vec<i32> = user_roles.iter().map(|v| v.role_id).collect();
     let domain_id = if auth.is_admin { None } else { auth.domain_id };
-    let roles = Role::find_by_ids(role_ids, domain_id).await?;
+    let roles = if role_ids.len() > 0 {
+        Role::find_by_ids(role_ids, domain_id).await?
+    } else {
+        vec![]
+    };
     Ok(reply!(roles))
 }
 
@@ -55,7 +59,11 @@ async fn users_of_role(Path(id): Path<i32>) -> APIResult {
     };
     let user_roles = UserRole::find_by_role(id).await?;
     let user_ids: Vec<String> = user_roles.iter().map(|v| v.user_id.clone()).collect();
-    let users = User::find_by_ids(user_ids).await?;
+    let users = if user_ids.len() > 0 {
+        User::find_by_ids(user_ids).await?
+    } else {
+        vec![]
+    };
     Ok(reply!(users))
 }
 
@@ -67,7 +75,11 @@ async fn perms_of_role(Path(id): Path<i32>, Extension(auth): Extension<Auth>) ->
     let role_perms = RolePerm::find_by_role(id).await?;
     let perm_ids: Vec<i32> = role_perms.iter().map(|v| v.perm_id).collect();
     let domain_id = if auth.is_admin { None } else { auth.domain_id };
-    let perms = Perm::find_by_ids(perm_ids, domain_id).await?;
+    let perms = if perm_ids.len() > 0 {
+        Perm::find_by_ids(perm_ids, domain_id).await?
+    } else {
+        vec![]
+    };
     Ok(reply!(perms))
 }
 
@@ -79,7 +91,11 @@ async fn orgs_of_user(Path(id): Path<String>, Extension(auth): Extension<Auth>) 
     let user_orgs = UserOrg::find_by_user(&id).await?;
     let org_ids: Vec<String> = user_orgs.iter().map(|v| v.org_id.clone()).collect();
     let domain_id = if auth.is_admin { None } else { auth.domain_id };
-    let orgs = Org::find_by_ids(org_ids, domain_id).await?;
+    let orgs = if org_ids.len() > 0 {
+        Org::find_by_ids(org_ids, domain_id).await?
+    } else {
+        vec![]
+    };
     Ok(reply!(orgs))
 }
 
@@ -90,7 +106,11 @@ async fn users_of_org(Path(id): Path<String>) -> APIResult {
     };
     let user_orgs = UserOrg::find_by_org(&id).await?;
     let user_ids: Vec<String> = user_orgs.iter().map(|v| v.user_id.clone()).collect();
-    let users = User::find_by_ids(user_ids).await?;
+    let users = if user_ids.len() > 0 {
+        User::find_by_ids(user_ids).await?
+    } else {
+        vec![]
+    };
     Ok(reply!(users))
 }
 
