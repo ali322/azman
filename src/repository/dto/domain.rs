@@ -3,12 +3,11 @@ use crate::{
         dao::{Domain, Role},
         DBError, Dao, POOL,
     },
-    util::now,
+    util::{now, uuid_v4},
 };
 use rbatis::crud::CRUDMut;
 use serde::{Deserialize, Serialize};
 use std::env;
-use uuid::Uuid;
 use validator::Validate;
 
 #[derive(Debug, Deserialize, Serialize, Validate)]
@@ -22,49 +21,49 @@ pub struct NewDomain {
 
 impl NewDomain {
     pub async fn create(self, user_id: &str) -> Result<Domain, DBError> {
-        let id = Uuid::new_v4().to_string();
+        let domain_id = uuid_v4();
         let admin_role_name =
             env::var("ADMIN_ROLE_NAME").expect("environment variable ADMIN_ROLE_NAME must be set");
         let common_role_name = env::var("COMMON_ROLE_NAME")
             .expect("environment variable COMMON_ROLE_NAME must be set");
         let mut tx = POOL.acquire_begin().await.unwrap();
+        let admin_role_id = uuid_v4();
         let new_role = Role {
-            id: None,
+            id: admin_role_id.clone(),
             name: admin_role_name.clone(),
             description: None,
             value: admin_role_name.clone(),
             level: 1,
-            is_deleted: Some(0),
-            domain_id: id.clone(),
+            is_deleted: 0,
+            domain_id: domain_id.clone(),
             created_at: now(),
             updated_at: now(),
             created_by: Some(user_id.to_string()),
             updated_by: Some(user_id.to_string()),
         };
-        let created = tx.save(&new_role, &[]).await?;
-        let admin_role_id = created.last_insert_id.unwrap();
+        tx.save(&new_role, &[]).await?;
+        let common_role_id = uuid_v4();
         let new_role = Role {
-            id: None,
+            id: common_role_id.clone(),
             name: common_role_name.clone(),
             description: None,
             value: common_role_name.clone(),
             level: 999,
-            is_deleted: Some(0),
-            domain_id: id.clone(),
+            is_deleted: 0,
+            domain_id: domain_id.clone(),
             created_at: now(),
             updated_at: now(),
             created_by: Some(user_id.to_string()),
             updated_by: Some(user_id.to_string()),
         };
-        let created = tx.save(&new_role, &[]).await?;
-        let common_role_id = created.last_insert_id.unwrap();
+        tx.save(&new_role, &[]).await?;
         let dao = Domain {
-            id: id.clone(),
+            id: domain_id.clone(),
             name: self.name,
             description: self.description,
-            default_role_id: Some(common_role_id as i32),
-            admin_role_id: Some(admin_role_id as i32),
-            is_deleted: Some(0),
+            default_role_id: Some(common_role_id),
+            admin_role_id: Some(admin_role_id),
+            is_deleted: 0,
             created_at: now(),
             updated_at: now(),
         };

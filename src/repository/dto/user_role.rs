@@ -1,6 +1,6 @@
 use crate::{
     repository::{dao::UserRole, DBError, Dao, POOL},
-    util::{datetime_format::naive_datetime, default_expire, now},
+    util::{serde_format::naive_datetime, default_expire, now},
 };
 use chrono::NaiveDateTime;
 use rbatis::crud::CRUDMut;
@@ -10,7 +10,7 @@ use validator::Validate;
 #[derive(Debug, Deserialize, Serialize, Validate)]
 pub struct UserGrantRole {
     pub user_id: String,
-    pub role_id: i32,
+    pub role_id: String,
 }
 
 impl UserGrantRole {
@@ -29,7 +29,7 @@ impl UserGrantRole {
 #[derive(Debug, Deserialize, Serialize, Validate)]
 pub struct UpdateUserRole {
     pub user_id: String,
-    pub role_id: i32,
+    pub role_id: String,
     #[serde(with = "naive_datetime")]
     pub expire: NaiveDateTime,
 }
@@ -51,7 +51,7 @@ impl UpdateUserRole {
 #[derive(Debug, Deserialize, Serialize, Validate)]
 pub struct UserRevokeRole {
     pub user_id: String,
-    pub role_id: i32,
+    pub role_id: String,
 }
 
 impl UserRevokeRole {
@@ -68,7 +68,7 @@ impl UserRevokeRole {
 #[derive(Debug, Deserialize, Serialize)]
 pub struct UserChangeRole {
     pub user_id: String,
-    pub role_ids: Vec<i32>,
+    pub role_ids: Vec<String>,
 }
 
 impl UserChangeRole {
@@ -81,7 +81,7 @@ impl UserChangeRole {
             .iter()
             .map(|role_id| UserRole {
                 user_id: self.user_id.clone(),
-                role_id: *role_id,
+                role_id: role_id.clone(),
                 expire: default_expire(),
                 created_at: now(),
             })

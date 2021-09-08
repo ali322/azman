@@ -4,8 +4,8 @@ use validator::Validate;
 
 #[derive(Debug, Deserialize, Serialize, Validate)]
 pub struct RoleGrantPerm {
-    pub role_id: i32,
-    pub perm_id: i32,
+    pub role_id: String,
+    pub perm_id: String,
 }
 
 impl RoleGrantPerm {
@@ -22,8 +22,8 @@ impl RoleGrantPerm {
 
 #[derive(Debug, Deserialize, Serialize, Validate)]
 pub struct RoleRevokePerm {
-    pub role_id: i32,
-    pub perm_id: i32,
+    pub role_id: String,
+    pub perm_id: String,
 }
 
 impl RoleRevokePerm {

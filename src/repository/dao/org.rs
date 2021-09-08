@@ -1,4 +1,4 @@
-use crate::{repository::{DBError, POOL, Dao}, util::datetime_format::naive_datetime};
+use crate::{repository::{DBError, POOL, Dao}, util::serde_format::{naive_datetime, i32_bool}};
 use app_macro::Dao;
 use async_trait::async_trait;
 use chrono::NaiveDateTime;
@@ -12,7 +12,8 @@ pub struct Org {
     pub name: String,
     pub description: Option<String>,
     pub domain_id: String,
-    pub is_deleted: Option<i32>,
+    #[serde(serialize_with = "i32_bool::serialize")]
+    pub is_deleted: i32,
     #[serde(serialize_with = "naive_datetime::serialize")]
     pub created_at: NaiveDateTime,
     #[serde(serialize_with = "naive_datetime::serialize")]

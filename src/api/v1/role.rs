@@ -32,8 +32,8 @@ async fn all(Extension(auth): Extension<Auth>) -> APIResult {
     Ok(reply!(all))
 }
 
-async fn one(Path(id): Path<i32>) -> APIResult {
-    let one: Role = Role::find_by_id(id).await?.into();
+async fn one(Path(id): Path<String>) -> APIResult {
+    let one: Role = Role::find_by_id(&id).await?.into();
     Ok(reply!(one))
 }
 
@@ -58,7 +58,7 @@ async fn create(Json(mut body): Json<NewRole>, Extension(auth): Extension<Auth>)
 }
 
 async fn update(
-    Path(id): Path<i32>,
+    Path(id): Path<String>,
     Json(mut body): Json<UpdateRole>,
     Extension(auth): Extension<Auth>,
 ) -> APIResult {
@@ -66,7 +66,7 @@ async fn update(
         Some(val) => val,
         None => return Err(reject!("来源域不能为空")),
     };
-    let found: Role = Role::find_by_id(id).await?.into();
+    let found: Role = Role::find_by_id(&id).await?.into();
     if !auth.is_admin {
         if auth.role_level > 1 {
             return Err(reject!(format!("仅域管理员可操作")));
@@ -77,16 +77,16 @@ async fn update(
     }
     body.validate()?;
     body.updated_by = Some(auth.id.clone());
-    let updated = body.save(id).await?;
+    let updated = body.save(&id).await?;
     Ok(reply!(updated))
 }
 
-async fn remove(Path(id): Path<i32>, Extension(auth): Extension<Auth>) -> APIResult {
+async fn remove(Path(id): Path<String>, Extension(auth): Extension<Auth>) -> APIResult {
     let domain_id = match auth.domain_id {
         Some(val) => val,
         None => return Err(reject!("来源域不能为空")),
     };
-    let found: Role = Role::find_by_id(id).await?.into();
+    let found: Role = Role::find_by_id(&id).await?.into();
     if !auth.is_admin {
         if auth.role_level > 1 {
             return Err(reject!(format!("仅域管理员可操作")));
@@ -95,13 +95,13 @@ async fn remove(Path(id): Path<i32>, Extension(auth): Extension<Auth>) -> APIRes
             return Err(reject!(format!("角色 {:?} 不属于来源域", found.id)));
         }
     }
-    let removed = Role::delete_by_id(id).await?;
-    Ok(reply!(removed))
+    Role::delete_by_id(&id).await?;
+    Ok(reply!(found))
 }
 
 async fn grant(Json(body): Json<UserGrantRole>, Extension(auth): Extension<Auth>) -> APIResult {
     if !auth.is_admin {
-        let role: Role = Role::find_by_id(body.role_id).await?.into();
+        let role: Role = Role::find_by_id(&body.role_id).await?.into();
         // let user = guard!(User::find_one(body.user_id, &conn));
         if role.domain_id != auth.domain_id.unwrap() {
             return Err(reject!(format!("角色 {:?} 不属于来源域", role.id)));
@@ -110,7 +110,7 @@ async fn grant(Json(body): Json<UserGrantRole>, Extension(auth): Extension<Auth>
             return Err(reject!(format!("角色 {:?} 超过当前角色层级", role.id)));
         }
     }
-    if UserRole::find_by_id(&body.user_id, body.role_id)
+    if UserRole::find_by_id(&body.user_id, &body.role_id)
         .await
         .is_ok()
     {
@@ -125,7 +125,7 @@ async fn grant(Json(body): Json<UserGrantRole>, Extension(auth): Extension<Auth>
 
 async fn revoke(Json(body): Json<UserRevokeRole>, Extension(auth): Extension<Auth>) -> APIResult {
     if !auth.is_admin {
-        let role: Role = Role::find_by_id(body.role_id).await?.into();
+        let role: Role = Role::find_by_id(&body.role_id).await?.into();
         // let user = guard!(User::find_one(body.user_id, &conn));
         if role.domain_id != auth.domain_id.unwrap() {
             return Err(reject!(format!("角色 {:?} 不属于来源域", role.id)));
@@ -134,7 +134,7 @@ async fn revoke(Json(body): Json<UserRevokeRole>, Extension(auth): Extension<Aut
             return Err(reject!(format!("角色 {:?} 超过当前角色层级", role.id)));
         }
     }
-    if UserRole::find_by_id(&body.user_id, body.role_id)
+    if UserRole::find_by_id(&body.user_id, &body.role_id)
         .await
         .is_err()
     {
@@ -163,7 +163,7 @@ async fn change(Json(body): Json<UserChangeRole>, Extension(auth): Extension<Aut
 
 async fn expire(Json(body): Json<UpdateUserRole>, Extension(auth): Extension<Auth>) -> APIResult {
     if !auth.is_admin {
-        let role: Role = Role::find_by_id(body.role_id).await?.into();
+        let role: Role = Role::find_by_id(&body.role_id).await?.into();
         // let user = guard!(User::find_one(body.user_id, &conn));
         if role.domain_id != auth.domain_id.unwrap() {
             return Err(reject!(format!("角色 {:?} 不属于来源域", role.id)));

@@ -32,9 +32,9 @@ async fn register(
         }
         None => return Err(reject!("来源域不能为空")),
     };
-    let role: Role = match domain.default_role_id {
+    let role: Role = match domain.default_role_id.clone() {
         Some(role_id) => {
-            let role = Role::find_by_id(role_id).await?;
+            let role = Role::find_by_id(&role_id).await?;
             role
         }
         None => {
@@ -47,7 +47,7 @@ async fn register(
     let user = body.create().await?;
     let user_grant_role = UserGrantRole {
         user_id: user.id.clone(),
-        role_id: role.id.unwrap(),
+        role_id: role.id.clone(),
     };
     user_grant_role.save().await?;
     let token = jwt::generate_token(Auth {
@@ -55,7 +55,7 @@ async fn register(
         username: user.username.clone(),
         domain_id: Some(domain.id.clone()),
         org_id: vec![],
-        role_id: vec![role.id.unwrap()],
+        role_id: vec![role.id.clone()],
         role_level: role.level,
         is_admin: false,
     });
@@ -76,13 +76,13 @@ async fn login(
     if !body.is_password_matched(&user_dao.password) {
         return Err(reject!("密码不正确"));
     }
-    if user_dao.is_actived == Some(0) {
+    if user_dao.is_actived == 0 {
         return Err(reject!("用户被禁用"));
     }
 
     let user = body.login(&user_dao).await?;
     let mut roles: Vec<Role> = vec![];
-    let mut role_ids: Vec<i32> = vec![];
+    let mut role_ids: Vec<String> = vec![];
     let mut orgs: Vec<Org> = vec![];
     let mut org_ids: Vec<String> = vec![];
     let mut domain: Option<Domain> = None;
@@ -103,7 +103,7 @@ async fn login(
         org_ids = user_orgs.iter().map(|v| v.org_id.clone()).collect();
         orgs = Org::find_by_ids(org_ids.clone(), domain_id.clone()).await?;
         let user_roles = UserRole::find_by_user(&user.id).await?;
-        role_ids = user_roles.iter().map(|v| v.role_id).collect();
+        role_ids = user_roles.iter().map(|v| v.role_id.clone()).collect();
         roles = Role::find_by_ids(role_ids.clone(), domain_id.clone()).await?;
         roles.sort_by(|a, b| a.level.cmp(&b.level));
     }
@@ -139,7 +139,7 @@ async fn connect(
     };
     let user: User;
     let mut roles: Vec<Role>;
-    let role_ids: Vec<i32>;
+    let role_ids: Vec<String>;
     let role_level: i32;
     let orgs: Vec<Org>;
     let org_ids: Vec<String>;
@@ -150,13 +150,13 @@ async fn connect(
         orgs = Org::find_by_ids(org_ids.clone(), Some(domain.id.clone())).await?;
 
         let user_roles = UserRole::find_by_user(&user.id).await?;
-        role_ids = user_roles.iter().map(|v| v.role_id).collect();
+        role_ids = user_roles.iter().map(|v| v.role_id.clone()).collect();
         roles = Role::find_by_ids(role_ids.clone(), Some(domain.id.clone())).await?;
         roles.sort_by(|a, b| a.level.cmp(&b.level));
         role_level = if roles.len() > 0 { roles[0].level } else { 999 };
     } else {
         user = body.create().await?;
-        let role: Role = match domain.default_role_id {
+        let role: Role = match domain.default_role_id.clone() {
             Some(role_id) => {
                 let role = Role::find_by_id(role_id).await?;
                 role
@@ -169,13 +169,13 @@ async fn connect(
             }
         };
         roles = vec![role.clone()];
-        role_ids = vec![role.id.unwrap()];
+        role_ids = vec![role.id.clone()];
         role_level = role.level;
         org_ids = vec![];
         orgs = vec![];
         let user_grant_role = UserGrantRole {
             user_id: user.id.clone(),
-            role_id: role.id.unwrap(),
+            role_id: role.id.clone(),
         };
         user_grant_role.save().await?;
     };

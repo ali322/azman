@@ -37,7 +37,7 @@ impl NewUser {
             avatar: self.avatar,
             memo: self.memo,
             sys_role: Some("member".to_string()),
-            is_actived: Some(true as i32),
+            is_actived: 1,
             last_logined_at: now(),
             created_at: now(),
         };
@@ -114,7 +114,7 @@ impl ConnectUser {
             avatar: self.avatar,
             memo: self.memo,
             sys_role: Some("member".to_string()),
-            is_actived: Some(true as i32),
+            is_actived: 1,
             last_logined_at: now(),
             created_at: now(),
         };

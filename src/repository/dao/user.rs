@@ -1,4 +1,4 @@
-use crate::{repository::{DBError, POOL, Dao}, util::datetime_format::naive_datetime};
+use crate::{repository::{DBError, POOL, Dao}, util::serde_format::{naive_datetime, i32_bool}};
 use app_macro::Dao;
 use async_trait::async_trait;
 use chrono::NaiveDateTime;
@@ -15,7 +15,8 @@ pub struct User{
     pub avatar: Option<String>,
     pub memo: Option<String>,
     pub sys_role: Option<String>,
-    pub is_actived: Option<i32>,
+    #[serde(serialize_with = "i32_bool::serialize")]
+    pub is_actived: i32,
     #[serde(serialize_with = "naive_datetime::serialize")]
     pub last_logined_at: NaiveDateTime,
     #[serde(serialize_with = "naive_datetime::serialize")]

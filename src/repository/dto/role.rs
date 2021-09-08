@@ -1,4 +1,4 @@
-use crate::{repository::{Dao, dao::Role, DBError, POOL}, util::now};
+use crate::{repository::{Dao, dao::Role, DBError, POOL}, util::{now, uuid_v4}};
 use serde::{Deserialize, Serialize};
 use validator::Validate;
 
@@ -19,21 +19,21 @@ pub struct NewRole {
 
 impl NewRole {
     pub async fn create(self) -> Result<Role, DBError> {
-        let mut dao = Role {
-            id: None,
+        let id = uuid_v4();
+        let dao = Role {
+            id,
             name: self.name,
             description: self.description,
             value: self.value,
             level: self.level,
             domain_id: self.domain_id,
-            is_deleted: Some(0),
+            is_deleted: 0,
             created_by: self.created_by.clone(),
             updated_by: self.created_by,
             created_at: now(),
             updated_at: now(),
         };
-        let id = Role::create_one(&dao).await?;
-        dao.id = Some(id as i32);
+        Role::create_one(&dao).await?;
         Ok(dao)
     }
 }
@@ -52,7 +52,7 @@ pub struct UpdateRole {
 }
 
 impl UpdateRole {
-    pub async fn save(self, id: i32) -> Result<Role, DBError> {
+    pub async fn save(self, id: &str) -> Result<Role, DBError> {
         let w = POOL.new_wrapper().eq("id", id);
         let mut dao = Role::find_one(&w).await?;
         dao.name = self.name;

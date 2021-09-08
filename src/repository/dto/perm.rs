@@ -1,6 +1,6 @@
 use crate::{
     repository::{dao::Perm, DBError, Dao, POOL},
-    util::now,
+    util::{now, uuid_v4},
 };
 use serde::{Deserialize, Serialize};
 use validator::Validate;
@@ -20,20 +20,20 @@ pub struct NewPerm {
 
 impl NewPerm {
     pub async fn create(self) -> Result<Perm, DBError> {
-        let mut dao = Perm {
-            id: None,
+        let id = uuid_v4();
+        let dao = Perm {
+            id,
             name: self.name,
             description: self.description,
             value: self.value,
             domain_id: self.domain_id,
-            is_deleted: Some(0),
+            is_deleted: 0,
             created_by: self.created_by.clone(),
             updated_by: self.created_by,
             created_at: now(),
             updated_at: now(),
         };
-        let id = Perm::create_one(&dao).await?;
-        dao.id = Some(id as i32);
+        Perm::create_one(&dao).await?;
         Ok(dao)
     }
 }
@@ -50,7 +50,7 @@ pub struct UpdatePerm {
 }
 
 impl UpdatePerm {
-    pub async fn save(self, id: i32) -> Result<Perm, DBError> {
+    pub async fn save(self, id: &str) -> Result<Perm, DBError> {
         let w = POOL.new_wrapper().eq("id", id);
         let mut dao = Perm::find_one(&w).await?;
         dao.name = self.name;

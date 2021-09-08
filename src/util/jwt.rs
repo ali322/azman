@@ -1,4 +1,4 @@
-use crate::util::datetime_format::utc_datetime;
+use crate::util::serde_format::utc_datetime;
 use chrono::{DateTime, Duration, Timelike, Utc};
 use jsonwebtoken::{
     decode, encode, errors::Result, DecodingKey, EncodingKey, Header, TokenData, Validation,
@@ -12,7 +12,7 @@ pub struct Auth {
     pub username: String,
     pub domain_id: Option<String>,
     pub org_id: Vec<String>,
-    pub role_id: Vec<i32>,
+    pub role_id: Vec<String>,
     pub role_level: i32,
     pub is_admin: bool,
 }

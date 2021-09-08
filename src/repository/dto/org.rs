@@ -25,7 +25,7 @@ impl NewOrg {
             name: self.name,
             description: self.description,
             domain_id: self.domain_id,
-            is_deleted: Some(0),
+            is_deleted: 0,
             created_by: self.created_by.clone(),
             updated_by: self.created_by,
             created_at: now(),

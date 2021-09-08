@@ -31,8 +31,8 @@ async fn all(Extension(auth): Extension<Auth>) -> APIResult {
     Ok(reply!(all))
 }
 
-async fn one(Path(id): Path<i32>) -> APIResult {
-    let one: Perm = Perm::find_by_id(id).await?;
+async fn one(Path(id): Path<String>) -> APIResult {
+    let one: Perm = Perm::find_by_id(&id).await?;
     Ok(reply!(one))
 }
 
@@ -57,7 +57,7 @@ async fn create(Json(mut body): Json<NewPerm>, Extension(auth): Extension<Auth>)
 }
 
 async fn update(
-    Path(id): Path<i32>,
+    Path(id): Path<String>,
     Json(mut body): Json<UpdatePerm>,
     Extension(auth): Extension<Auth>,
 ) -> APIResult {
@@ -65,7 +65,7 @@ async fn update(
         Some(val) => val,
         None => return Err(reject!("来源域不能为空")),
     };
-    let found: Perm = Perm::find_by_id(id).await?.into();
+    let found: Perm = Perm::find_by_id(&id).await?.into();
     if !auth.is_admin {
         if auth.role_level > 1 {
             return Err(reject!(format!("仅域管理员可操作")));
@@ -76,8 +76,26 @@ async fn update(
     }
     body.validate()?;
     body.updated_by = Some(auth.id);
-    let updated = body.save(id).await?;
+    let updated = body.save(&id).await?;
     Ok(reply!(updated))
+}
+
+async fn remove(Path(id): Path<String>, Extension(auth): Extension<Auth>) -> APIResult {
+    let domain_id = match auth.domain_id {
+        Some(val) => val,
+        None => return Err(reject!("来源域不能为空")),
+    };
+    let found: Perm = Perm::find_by_id(&id).await?.into();
+    if !auth.is_admin {
+        if auth.role_level > 1 {
+            return Err(reject!(format!("仅域管理员可操作")));
+        }
+        if found.domain_id != domain_id {
+            return Err(reject!(format!("权限 {:?} 不属于来源域", found.id)));
+        }
+    }
+    Perm::delete_by_id(&id).await?;
+    Ok(reply!(found))
 }
 
 async fn grant(Json(body): Json<RoleGrantPerm>, Extension(auth): Extension<Auth>) -> APIResult {
@@ -86,8 +104,8 @@ async fn grant(Json(body): Json<RoleGrantPerm>, Extension(auth): Extension<Auth>
         None => return Err(reject!("来源域不能为空")),
     };
     if !auth.is_admin {
-        let role: Role = Role::find_by_id(body.role_id).await?;
-        let perm: Perm = Perm::find_by_id(body.perm_id).await?;
+        let role: Role = Role::find_by_id(&body.role_id).await?;
+        let perm: Perm = Perm::find_by_id(&body.perm_id).await?;
         if role.domain_id != domain_id {
             return Err(reject!(format!("角色 {:?} 不属于来源域", role.id)));
         } else if perm.domain_id != domain_id {
@@ -97,7 +115,7 @@ async fn grant(Json(body): Json<RoleGrantPerm>, Extension(auth): Extension<Auth>
             return Err(reject!(format!("仅域管理员可操作")));
         }
     }
-    if RolePerm::find_by_id(body.role_id, body.perm_id)
+    if RolePerm::find_by_id(&body.role_id, &body.perm_id)
         .await
         .is_ok()
     {
@@ -116,8 +134,8 @@ async fn revoke(Json(body): Json<RoleRevokePerm>, Extension(auth): Extension<Aut
         None => return Err(reject!("来源域不能为空")),
     };
     if !auth.is_admin {
-        let role: Role = Role::find_by_id(body.role_id).await?;
-        let perm: Perm = Perm::find_by_id(body.perm_id).await?;
+        let role: Role = Role::find_by_id(&body.role_id).await?;
+        let perm: Perm = Perm::find_by_id(&body.perm_id).await?;
         if role.domain_id != domain_id {
             return Err(reject!(format!("角色 {:?} 不属于来源域", role.id)));
         } else if perm.domain_id != domain_id {
@@ -127,7 +145,7 @@ async fn revoke(Json(body): Json<RoleRevokePerm>, Extension(auth): Extension<Aut
             return Err(reject!(format!("仅域管理员可操作")));
         }
     }
-    if RolePerm::find_by_id(body.role_id, body.perm_id)
+    if RolePerm::find_by_id(&body.role_id, &body.perm_id)
         .await
         .is_err()
     {
@@ -143,7 +161,7 @@ async fn revoke(Json(body): Json<RoleRevokePerm>, Extension(auth): Extension<Aut
 pub fn apply_routes(v1: Router<BoxRoute>) -> Router<BoxRoute> {
     let restrict_layer = RequireAuthorizationLayer::custom(Restrict::new());
     v1.route("/perm", post(create).get(all))
-        .route("/perm/:id", put(update).get(one))
+        .route("/perm/:id", put(update).get(one).delete(remove))
         .route("/grant/perm", post(grant))
         .route("/revoke/perm", post(revoke))
         .layer(restrict_layer)

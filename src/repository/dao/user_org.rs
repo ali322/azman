@@ -1,4 +1,4 @@
-use crate::{repository::{DBError, POOL, Dao}, util::datetime_format::naive_datetime};
+use crate::{repository::{DBError, POOL, Dao}, util::serde_format::naive_datetime};
 use app_macro::Dao;
 use async_trait::async_trait;
 use serde::Serialize;
