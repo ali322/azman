@@ -1,4 +1,3 @@
-use app_macro_trait::Dao;
 use axum::{
     extract::{Extension, Path},
     handler::{post, put},
@@ -6,7 +5,15 @@ use axum::{
     Json, Router,
 };
 
-use crate::{repository::{dao::{DomainDao, OrgDao, UserOrgDao}, dto::{NewOrg, UpdateOrg, UserJoinOrg, UserLeaveOrg}, vo::{Org, UserOrg}}, util::{jwt::Auth, restrict::Restrict, APIResult}};
+use crate::{
+    repository::{
+        Dao,
+        dao::{DomainDao, OrgDao, UserOrgDao},
+        dto::{NewOrg, UpdateOrg, UserJoinOrg, UserLeaveOrg},
+        vo::Org,
+    },
+    util::{jwt::Auth, restrict::Restrict, APIResult},
+};
 use tower_http::auth::RequireAuthorizationLayer;
 use validator::Validate;
 
@@ -91,7 +98,10 @@ async fn join(Json(body): Json<UserJoinOrg>, Extension(auth): Extension<Auth>) -
             return Err(reject!(format!("组织 {:?} 不属于来源域", found.id)));
         }
     }
-    if UserOrgDao::find_by_id(&body.user_id, &body.org_id).await.is_ok() {
+    if UserOrgDao::find_by_id(&body.user_id, &body.org_id)
+        .await
+        .is_ok()
+    {
         return Err(reject!(format!(
             "用户 {} 已加入组织 {}",
             &body.user_id, &body.org_id

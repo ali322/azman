@@ -1,5 +1,12 @@
-use crate::{repository::{dao::UserDao, dto::{ChangePassword, ResetPassword, UpdateUser}, vo::User}, util::{jwt::Auth, restrict::Restrict, APIResult}};
-use app_macro_trait::Dao;
+use crate::{
+    repository::{
+        dao::UserDao,
+        dto::{ChangePassword, ResetPassword, UpdateUser},
+        vo::User,
+        Dao,
+    },
+    util::{jwt::Auth, restrict::Restrict, APIResult},
+};
 use axum::{
     extract::{Extension, Path},
     handler::{get, post, put},
@@ -10,7 +17,11 @@ use tower_http::auth::RequireAuthorizationLayer;
 use validator::Validate;
 
 async fn all() -> APIResult {
-    let all: Vec<User> = UserDao::find_all().await?.into_iter().map(Into::into).collect();
+    let all: Vec<User> = UserDao::find_all()
+        .await?
+        .into_iter()
+        .map(Into::into)
+        .collect();
     Ok(reply!(all))
 }
 

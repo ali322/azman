@@ -1,7 +1,6 @@
-use crate::repository::{dao::RoleDao, vo::Role, DBError, POOL};
+use crate::repository::{Dao, dao::RoleDao, vo::Role, DBError, POOL};
 use chrono::{Local, NaiveDateTime};
 use serde::{Deserialize, Serialize};
-use app_macro_trait::Dao;
 use validator::Validate;
 
 #[derive(Debug, Deserialize, Serialize, Validate)]

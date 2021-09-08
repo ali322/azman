@@ -5,10 +5,10 @@ use axum::{
     Json, Router,
 };
 use tower_http::auth::RequireAuthorizationLayer;
-use app_macro_trait::Dao;
 
 use crate::{
     repository::{
+        Dao,
         dao::DomainDao,
         dto::{NewDomain, UpdateDomain},
         vo::Domain,

@@ -52,15 +52,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "app_macro_trait"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "rbatis",
- "serde",
-]
-
-[[package]]
 name = "arrayvec"
 version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -299,7 +290,6 @@ name = "azman"
 version = "0.1.0"
 dependencies = [
  "app_macro",
- "app_macro_trait",
  "async-trait",
  "axum",
  "bcrypt",

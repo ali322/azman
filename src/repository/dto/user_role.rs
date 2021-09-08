@@ -1,9 +1,8 @@
 use crate::{
-    repository::{dao::UserRoleDao, vo::UserRole, DBError, POOL},
+    repository::{Dao, dao::UserRoleDao, vo::UserRole, DBError, POOL},
     util::datetime_format::naive_datetime,
 };
 use chrono::{Duration, Local, NaiveDateTime};
-use app_macro_trait::Dao;
 use rbatis::crud::CRUDMut;
 use serde::{Deserialize, Serialize};
 use validator::Validate;

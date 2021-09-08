@@ -1,4 +1,3 @@
-use app_macro_trait::Dao;
 use axum::{
     extract::{Extension, Path},
     handler::{post, put},
@@ -7,7 +6,15 @@ use axum::{
 };
 use tower_http::auth::RequireAuthorizationLayer;
 
-use crate::{repository::{dao::{DomainDao, RoleDao, UserRoleDao}, dto::{NewRole, UpdateRole, UpdateUserRole, UserChangeRole, UserGrantRole, UserRevokeRole}, vo::{Role, UserRole}}, util::{jwt::Auth, restrict::Restrict, APIResult}};
+use crate::{
+    repository::{
+        Dao,
+        dao::{DomainDao, RoleDao, UserRoleDao},
+        dto::{NewRole, UpdateRole, UpdateUserRole, UserChangeRole, UserGrantRole, UserRevokeRole},
+        vo::Role,
+    },
+    util::{jwt::Auth, restrict::Restrict, APIResult},
+};
 use validator::Validate;
 
 async fn all(Extension(auth): Extension<Auth>) -> APIResult {

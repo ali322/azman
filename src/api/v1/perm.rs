@@ -1,4 +1,3 @@
-use app_macro_trait::Dao;
 use axum::{
     extract::{Extension, Path},
     handler::{post, put},
@@ -7,7 +6,15 @@ use axum::{
 };
 use tower_http::auth::RequireAuthorizationLayer;
 
-use crate::{repository::{dao::{DomainDao, PermDao, RoleDao, RolePermDao}, dto::{NewPerm, RoleGrantPerm, RoleRevokePerm, UpdatePerm}, vo::{Perm, Role, RolePerm}}, util::{jwt::Auth, restrict::Restrict, APIResult}};
+use crate::{
+    repository::{
+        Dao,
+        dao::{DomainDao, PermDao, RoleDao, RolePermDao},
+        dto::{NewPerm, RoleGrantPerm, RoleRevokePerm, UpdatePerm},
+        vo::{Perm, Role},
+    },
+    util::{jwt::Auth, restrict::Restrict, APIResult},
+};
 use validator::Validate;
 
 async fn all(Extension(auth): Extension<Auth>) -> APIResult {
@@ -95,7 +102,10 @@ async fn grant(Json(body): Json<RoleGrantPerm>, Extension(auth): Extension<Auth>
             return Err(reject!(format!("仅域管理员可操作")));
         }
     }
-    if RolePermDao::find_by_id(body.role_id, body.perm_id).await.is_ok() {
+    if RolePermDao::find_by_id(body.role_id, body.perm_id)
+        .await
+        .is_ok()
+    {
         return Err(reject!(format!(
             "角色 {} 已赋予权限 {}",
             body.role_id, body.perm_id
@@ -111,8 +121,8 @@ async fn revoke(Json(body): Json<RoleRevokePerm>, Extension(auth): Extension<Aut
         None => return Err(reject!("来源域不能为空")),
     };
     if !auth.is_admin {
-      let role: Role = RoleDao::find_by_id(body.role_id).await?.into();
-      let perm: Perm = PermDao::find_by_id(body.perm_id).await?.into();
+        let role: Role = RoleDao::find_by_id(body.role_id).await?.into();
+        let perm: Perm = PermDao::find_by_id(body.perm_id).await?.into();
         if role.domain_id != domain_id {
             return Err(reject!(format!("角色 {:?} 不属于来源域", role.id)));
         } else if perm.domain_id != domain_id {

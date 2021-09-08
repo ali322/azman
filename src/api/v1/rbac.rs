@@ -1,4 +1,3 @@
-use app_macro_trait::Dao;
 use std::collections::HashMap;
 
 use axum::{
@@ -9,7 +8,15 @@ use axum::{
 };
 use tower_http::auth::RequireAuthorizationLayer;
 
-use crate::{repository::{dao::{OrgDao, PermDao, RoleDao, RolePermDao, UserDao, UserOrgDao, UserRoleDao}, dto::Access, vo::{Org, Perm, Role, RolePerm, User, UserOrg, UserRole}}, util::{jwt::Auth, restrict::Restrict, APIResult}};
+use crate::{
+    repository::{
+        Dao,
+        dao::{OrgDao, PermDao, RoleDao, RolePermDao, UserDao, UserOrgDao, UserRoleDao},
+        dto::Access,
+        vo::{Org, Perm, Role, User},
+    },
+    util::{jwt::Auth, restrict::Restrict, APIResult},
+};
 
 async fn access(Json(body): Json<Access>, Extension(auth): Extension<Auth>) -> APIResult {
     let role_perms = RolePermDao::find_by_role(body.role_id).await?;
@@ -44,7 +51,11 @@ async fn roles_of_user(Path(id): Path<String>, Extension(auth): Extension<Auth>)
     let role_ids: Vec<i32> = user_roles.iter().map(|v| v.role_id).collect();
     let domain_id = if auth.is_admin { None } else { auth.domain_id };
     let roles: Vec<Role> = if role_ids.len() > 0 {
-        RoleDao::find_by_ids(role_ids, domain_id).await?.into_iter().map(Into::into).collect()
+        RoleDao::find_by_ids(role_ids, domain_id)
+            .await?
+            .into_iter()
+            .map(Into::into)
+            .collect()
     } else {
         vec![]
     };
@@ -114,7 +125,11 @@ async fn users_of_org(Path(id): Path<String>) -> APIResult {
     let user_orgs = UserOrgDao::find_by_org(&id).await?;
     let user_ids: Vec<String> = user_orgs.iter().map(|v| v.user_id.clone()).collect();
     let users: Vec<User> = if user_ids.len() > 0 {
-        UserDao::find_by_ids(user_ids).await?.into_iter().map(Into::into).collect()
+        UserDao::find_by_ids(user_ids)
+            .await?
+            .into_iter()
+            .map(Into::into)
+            .collect()
     } else {
         vec![]
     };

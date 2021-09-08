@@ -1,12 +1,19 @@
-use app_macro_trait::Dao;
 use axum::{extract::Query, handler::post, routing::BoxRoute, Json, Router};
 use std::collections::HashMap;
 use validator::Validate;
 
-use crate::{repository::{dao::{DomainDao, OrgDao, RoleDao, UserDao, UserOrgDao, UserRoleDao}, dto::{ConnectUser, LoginUser, NewUser, UserGrantRole}, vo::{Domain, Org, Role, User, UserOrg, UserRole}}, util::{
+use crate::{
+    repository::{
+        dao::{DomainDao, OrgDao, RoleDao, UserDao, UserOrgDao, UserRoleDao},
+        dto::{ConnectUser, LoginUser, NewUser, UserGrantRole},
+        vo::{Domain, Org, Role, User},
+        Dao
+    },
+    util::{
         jwt::{self, Auth},
         APIResult,
-    }};
+    },
+};
 
 async fn register(
     Query(query): Query<HashMap<String, String>>,
@@ -158,7 +165,11 @@ async fn connect(
 
         let user_roles = UserRoleDao::find_by_user(&user.id).await?;
         role_ids = user_roles.iter().map(|v| v.role_id).collect();
-        roles = RoleDao::find_by_ids(role_ids.clone(), Some(domain.id.clone())).await?.into_iter().map(Into::into).collect();
+        roles = RoleDao::find_by_ids(role_ids.clone(), Some(domain.id.clone()))
+            .await?
+            .into_iter()
+            .map(Into::into)
+            .collect();
         roles.sort_by(|a, b| a.level.cmp(&b.level));
         role_level = if roles.len() > 0 { roles[0].level } else { 999 };
     } else {

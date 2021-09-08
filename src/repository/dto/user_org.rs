@@ -1,6 +1,5 @@
-use crate::repository::{dao::UserOrgDao, vo::UserOrg, DBError, POOL};
+use crate::repository::{Dao, dao::UserOrgDao, vo::UserOrg, DBError, POOL};
 use chrono::{Duration, Local, NaiveDateTime};
-use app_macro_trait::Dao;
 use serde::{Deserialize, Serialize};
 use validator::Validate;
 
