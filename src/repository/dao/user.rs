@@ -1,4 +1,4 @@
-use crate::repository::{DBError, POOL, Dao};
+use crate::{repository::{DBError, POOL, Dao}, util::datetime_format::naive_datetime};
 use app_macro::Dao;
 use async_trait::async_trait;
 use chrono::NaiveDateTime;
@@ -7,7 +7,7 @@ use serde::Serialize;
 
 #[crud_table(table_name: "users")]
 #[derive(Debug, Clone, Dao)]
-pub struct UserDao {
+pub struct User{
     pub id: String,
     pub username: String,
     pub password: String,
@@ -16,11 +16,13 @@ pub struct UserDao {
     pub memo: Option<String>,
     pub sys_role: Option<String>,
     pub is_actived: Option<i32>,
+    #[serde(serialize_with = "naive_datetime::serialize")]
     pub last_logined_at: NaiveDateTime,
+    #[serde(serialize_with = "naive_datetime::serialize")]
     pub created_at: NaiveDateTime,
 }
 
-impl UserDao {
+impl User {
     pub async fn find_by_username(username: &str) -> Result<Self, DBError> {
         let w = POOL.new_wrapper().eq("username", username);
         Self::find_one(&w).await

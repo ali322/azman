@@ -4,10 +4,9 @@ use validator::Validate;
 
 use crate::{
     repository::{
-        dao::{DomainDao, OrgDao, RoleDao, UserDao, UserOrgDao, UserRoleDao},
+        dao::{Domain, Org, Role, User, UserOrg, UserRole},
         dto::{ConnectUser, LoginUser, NewUser, UserGrantRole},
-        vo::{Domain, Org, Role, User},
-        Dao
+        Dao,
     },
     util::{
         jwt::{self, Auth},
@@ -20,12 +19,12 @@ async fn register(
     Json(body): Json<NewUser>,
 ) -> APIResult {
     body.validate()?;
-    if UserDao::find_by_username(&body.username).await.is_ok() {
+    if User::find_by_username(&body.username).await.is_ok() {
         return Err(reject!("用户已存在"));
     }
     let domain = match query.get("from") {
         Some(domain_id) => {
-            let domain = match DomainDao::find_by_id(&domain_id).await {
+            let domain = match Domain::find_by_id(&domain_id).await {
                 Ok(val) => val,
                 Err(_) => return Err(reject!(format!("来源域 {} 不存在", domain_id))),
             };
@@ -35,7 +34,7 @@ async fn register(
     };
     let role: Role = match domain.default_role_id {
         Some(role_id) => {
-            let role = RoleDao::find_by_id(role_id).await?.into();
+            let role = Role::find_by_id(role_id).await?;
             role
         }
         None => {
@@ -70,7 +69,7 @@ async fn login(
     Json(body): Json<LoginUser>,
 ) -> APIResult {
     body.validate()?;
-    let user_dao = match UserDao::find_by_username_or_email(&body.username_or_email).await {
+    let user_dao = match User::find_by_username_or_email(&body.username_or_email).await {
         Ok(val) => val,
         Err(_) => return Err(reject!("用户不存在")),
     };
@@ -92,29 +91,20 @@ async fn login(
     if !is_admin {
         domain = match domain_id.clone() {
             Some(v) => {
-                let domain = match DomainDao::find_by_id(&v).await {
+                let domain = match Domain::find_by_id(&v).await {
                     Ok(val) => val,
                     Err(_) => return Err(reject!(format!("来源域 {} 不存在", v.clone()))),
                 };
-                Some(domain.into())
+                Some(domain)
             }
             None => return Err(reject!("来源域不能为空")),
         };
-        let user_orgs = UserOrgDao::find_by_user(&user.id).await?;
+        let user_orgs = UserOrg::find_by_user(&user.id).await?;
         org_ids = user_orgs.iter().map(|v| v.org_id.clone()).collect();
-        orgs = OrgDao::find_by_ids(org_ids.clone(), domain_id.clone())
-            .await?
-            .into_iter()
-            .map(Into::into)
-            .collect();
-
-        let user_roles = UserRoleDao::find_by_user(&user.id).await?;
+        orgs = Org::find_by_ids(org_ids.clone(), domain_id.clone()).await?;
+        let user_roles = UserRole::find_by_user(&user.id).await?;
         role_ids = user_roles.iter().map(|v| v.role_id).collect();
-        roles = RoleDao::find_by_ids(role_ids.clone(), domain_id.clone())
-            .await?
-            .into_iter()
-            .map(Into::into)
-            .collect();
+        roles = Role::find_by_ids(role_ids.clone(), domain_id.clone()).await?;
         roles.sort_by(|a, b| a.level.cmp(&b.level));
     }
     let role_level = if roles.len() > 0 { roles[0].level } else { 999 };
@@ -139,7 +129,7 @@ async fn connect(
     body.validate()?;
     let domain = match query.get("from") {
         Some(domain_id) => {
-            let domain = match DomainDao::find_by_id(&domain_id).await {
+            let domain = match Domain::find_by_id(&domain_id).await {
                 Ok(val) => val,
                 Err(_) => return Err(reject!(format!("来源域 {} 不存在", domain_id))),
             };
@@ -153,30 +143,22 @@ async fn connect(
     let role_level: i32;
     let orgs: Vec<Org>;
     let org_ids: Vec<String>;
-    if let Ok(val) = UserDao::find_by_username(&body.username).await {
+    if let Ok(val) = User::find_by_username(&body.username).await {
         user = val.into();
-        let user_orgs = UserOrgDao::find_by_user(&user.id).await?;
+        let user_orgs = UserOrg::find_by_user(&user.id).await?;
         org_ids = user_orgs.iter().map(|v| v.org_id.clone()).collect();
-        orgs = OrgDao::find_by_ids(org_ids.clone(), Some(domain.id.clone()))
-            .await?
-            .into_iter()
-            .map(Into::into)
-            .collect();
+        orgs = Org::find_by_ids(org_ids.clone(), Some(domain.id.clone())).await?;
 
-        let user_roles = UserRoleDao::find_by_user(&user.id).await?;
+        let user_roles = UserRole::find_by_user(&user.id).await?;
         role_ids = user_roles.iter().map(|v| v.role_id).collect();
-        roles = RoleDao::find_by_ids(role_ids.clone(), Some(domain.id.clone()))
-            .await?
-            .into_iter()
-            .map(Into::into)
-            .collect();
+        roles = Role::find_by_ids(role_ids.clone(), Some(domain.id.clone())).await?;
         roles.sort_by(|a, b| a.level.cmp(&b.level));
         role_level = if roles.len() > 0 { roles[0].level } else { 999 };
     } else {
         user = body.create().await?;
         let role: Role = match domain.default_role_id {
             Some(role_id) => {
-                let role = RoleDao::find_by_id(role_id).await?.into();
+                let role = Role::find_by_id(role_id).await?;
                 role
             }
             None => {

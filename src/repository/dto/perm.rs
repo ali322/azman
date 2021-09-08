@@ -1,5 +1,7 @@
-use crate::repository::{Dao, dao::PermDao, vo::Perm, DBError, POOL};
-use chrono::{Local, NaiveDateTime};
+use crate::{
+    repository::{dao::Perm, DBError, Dao, POOL},
+    util::now,
+};
 use serde::{Deserialize, Serialize};
 use validator::Validate;
 
@@ -16,13 +18,9 @@ pub struct NewPerm {
     pub created_by: Option<String>,
 }
 
-fn now() -> NaiveDateTime {
-    Local::now().naive_local()
-}
-
 impl NewPerm {
     pub async fn create(self) -> Result<Perm, DBError> {
-        let mut dao = PermDao {
+        let mut dao = Perm {
             id: None,
             name: self.name,
             description: self.description,
@@ -34,9 +32,9 @@ impl NewPerm {
             created_at: now(),
             updated_at: now(),
         };
-        let id = PermDao::create_one(&dao).await?;
+        let id = Perm::create_one(&dao).await?;
         dao.id = Some(id as i32);
-        Ok(dao.into())
+        Ok(dao)
     }
 }
 
@@ -54,12 +52,12 @@ pub struct UpdatePerm {
 impl UpdatePerm {
     pub async fn save(self, id: i32) -> Result<Perm, DBError> {
         let w = POOL.new_wrapper().eq("id", id);
-        let mut dao = PermDao::find_one(&w).await?;
+        let mut dao = Perm::find_one(&w).await?;
         dao.name = self.name;
         dao.description = self.description;
         dao.value = self.value;
         dao.updated_by = self.updated_by;
-        PermDao::update_one(&dao, &w).await?;
-        Ok(dao.into())
+        Perm::update_one(&dao, &w).await?;
+        Ok(dao)
     }
 }

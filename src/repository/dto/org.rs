@@ -1,5 +1,7 @@
-use crate::repository::{Dao, dao::OrgDao, vo::Org, DBError, POOL};
-use chrono::{Local, NaiveDateTime};
+use crate::{
+    repository::{dao::Org, DBError, Dao, POOL},
+    util::now,
+};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use validator::Validate;
@@ -15,14 +17,10 @@ pub struct NewOrg {
     pub created_by: Option<String>,
 }
 
-fn now() -> NaiveDateTime {
-    Local::now().naive_local()
-}
-
 impl NewOrg {
     pub async fn create(self) -> Result<Org, DBError> {
         let id = Uuid::new_v4().to_string();
-        let dao = OrgDao {
+        let dao = Org {
             id: id.clone(),
             name: self.name,
             description: self.description,
@@ -33,8 +31,8 @@ impl NewOrg {
             created_at: now(),
             updated_at: now(),
         };
-        OrgDao::create_one(&dao).await?;
-        Ok(dao.into())
+        Org::create_one(&dao).await?;
+        Ok(dao)
     }
 }
 
@@ -50,12 +48,12 @@ pub struct UpdateOrg {
 impl UpdateOrg {
     pub async fn save(self, id: &str) -> Result<Org, DBError> {
         let w = POOL.new_wrapper().eq("id", id);
-        let mut dao = OrgDao::find_one(&w).await?;
+        let mut dao = Org::find_one(&w).await?;
         if let Some(name) = self.name {
             dao.name = name;
         }
         dao.description = self.description;
-        OrgDao::update_one(&dao, &w).await?;
-        Ok(dao.into())
+        Org::update_one(&dao, &w).await?;
+        Ok(dao)
     }
 }

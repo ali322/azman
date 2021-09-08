@@ -1,5 +1,8 @@
-use crate::repository::{Dao, dao::UserOrgDao, vo::UserOrg, DBError, POOL};
-use chrono::{Duration, Local, NaiveDateTime};
+use crate::{
+    repository::{dao::UserOrg, DBError, Dao, POOL},
+    util::{default_expire, now},
+};
+use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
 use validator::Validate;
 
@@ -10,19 +13,16 @@ pub struct UserJoinOrg {
     pub expire: Option<NaiveDateTime>,
 }
 
-fn default_expire() -> NaiveDateTime {
-    Local::now().naive_local() + Duration::days(30)
-}
-
 impl UserJoinOrg {
     pub async fn save(self) -> Result<UserOrg, DBError> {
-        let dao = UserOrgDao {
+        let dao = UserOrg {
             user_id: self.user_id,
             org_id: self.org_id,
             expire: default_expire(),
+            created_at: now(),
         };
-        UserOrgDao::create_one(&dao).await?;
-        Ok(dao.into())
+        UserOrg::create_one(&dao).await?;
+        Ok(dao)
     }
 }
 
@@ -39,6 +39,6 @@ impl UserLeaveOrg {
             .eq("user_id", self.user_id)
             .and()
             .eq("org_id", self.org_id);
-        UserOrgDao::delete_one(&w).await
+        UserOrg::delete_one(&w).await
     }
 }

@@ -47,6 +47,7 @@ CREATE TABLE IF NOT EXISTS `user_has_roles`(
   `user_id` VARCHAR(100) REFERENCES `users`(`id`),
   `role_id` INTEGER REFERENCES `roles`(`id`),
   `expire` TIMESTAMP NOT NULL,
+  `created_at` TIMESTAMP NOT NULL DEFAULT NOW(),
   PRIMARY KEY(`user_id`, `role_id`)
 );
 
@@ -67,6 +68,7 @@ CREATE TABLE IF NOT EXISTS `perms`(
 CREATE TABLE IF NOT EXISTS `role_has_perms`(
   `perm_id` INTEGER REFERENCES `perms`(`id`),
   `role_id` INTEGER REFERENCES `roles`(`id`),
+  `created_at` TIMESTAMP NOT NULL DEFAULT NOW(),
   PRIMARY KEY(`perm_id`, `role_id`)
 );
 
@@ -87,6 +89,7 @@ CREATE TABLE IF NOT EXISTS `user_has_orgs`(
   `user_id` VARCHAR(100) REFERENCES `users`(`id`),
   `org_id` VARCHAR(100) REFERENCES `orgs`(`id`),
   `expire` TIMESTAMP NOT NULL,
+  `created_at` TIMESTAMP NOT NULL DEFAULT NOW(),
   PRIMARY KEY(`user_id`, `org_id`)
 );
 

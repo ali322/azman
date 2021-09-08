@@ -1,6 +1,9 @@
-use crate::repository::{Dao, dao::UserDao, vo::User, DBError, POOL};
+use crate::{
+    repository::{dao::User, DBError, Dao, POOL},
+    util::now,
+};
 use bcrypt::{hash, verify};
-use chrono::{Local, NaiveDateTime};
+use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use validator::Validate;
@@ -22,15 +25,11 @@ pub struct NewUser {
     pub last_logined_at: NaiveDateTime,
 }
 
-fn now() -> NaiveDateTime {
-    Local::now().naive_local()
-}
-
 impl NewUser {
     pub async fn create(self) -> Result<User, DBError> {
         let id = Uuid::new_v4().to_string();
         let hashed_password = hash(&self.password, 4).unwrap();
-        let dao = UserDao {
+        let dao = User {
             id: id.clone(),
             username: self.username,
             password: hashed_password,
@@ -42,8 +41,8 @@ impl NewUser {
             last_logined_at: now(),
             created_at: now(),
         };
-        UserDao::create_one(&dao).await?;
-        Ok(dao.into())
+        User::create_one(&dao).await?;
+        Ok(dao)
     }
 }
 
@@ -58,12 +57,12 @@ pub struct UpdateUser {
 impl UpdateUser {
     pub async fn save(self, id: &str) -> Result<User, DBError> {
         let w = POOL.new_wrapper().eq("id", id);
-        let mut dao = UserDao::find_one(&w).await?;
+        let mut dao = User::find_one(&w).await?;
         dao.email = self.email;
         dao.avatar = self.avatar;
         dao.memo = self.memo;
-        UserDao::update_one(&dao, &w).await?;
-        Ok(dao.into())
+        User::update_one(&dao, &w).await?;
+        Ok(dao)
     }
 }
 
@@ -79,12 +78,12 @@ impl LoginUser {
     pub fn is_password_matched(&self, target: &str) -> bool {
         verify(self.password.clone(), target).unwrap()
     }
-    pub async fn login(&self, dao: &UserDao) -> Result<User, DBError> {
+    pub async fn login(&self, dao: &User) -> Result<User, DBError> {
         let mut dao = dao.to_owned();
         dao.last_logined_at = now();
         let w = POOL.new_wrapper().eq("id", &dao.id);
-        UserDao::update_one(&dao, &w).await?;
-        Ok(dao.into())
+        User::update_one(&dao, &w).await?;
+        Ok(dao)
     }
 }
 
@@ -107,7 +106,7 @@ impl ConnectUser {
     pub async fn create(self) -> Result<User, DBError> {
         let id = Uuid::new_v4().to_string();
         let hashed_password = hash(CONNECT_PASSWORD, 4).unwrap();
-        let dao = UserDao {
+        let dao = User {
             id: id.clone(),
             username: self.username,
             password: hashed_password,
@@ -119,8 +118,8 @@ impl ConnectUser {
             last_logined_at: now(),
             created_at: now(),
         };
-        UserDao::create_one(&dao).await?;
-        Ok(dao.into())
+        User::create_one(&dao).await?;
+        Ok(dao)
     }
 }
 
@@ -138,13 +137,13 @@ impl ChangePassword {
     pub fn is_password_matched(&self, target: &str) -> bool {
         verify(&self.old_password, target).unwrap()
     }
-    pub async fn change_password(&self, dao: &UserDao) -> Result<User, DBError> {
+    pub async fn change_password(&self, dao: &User) -> Result<User, DBError> {
         let mut dao = dao.to_owned();
         let hashed_password = hash(&self.new_password, 4).unwrap();
         dao.password = hashed_password;
         let w = POOL.new_wrapper().eq("id", &dao.id);
-        UserDao::update_one(&dao, &w).await?;
-        Ok(dao.into())
+        User::update_one(&dao, &w).await?;
+        Ok(dao)
     }
 }
 
@@ -157,12 +156,12 @@ pub struct ResetPassword {
 }
 
 impl ResetPassword {
-    pub async fn reset_password(&self, dao: &UserDao) -> Result<User, DBError> {
+    pub async fn reset_password(&self, dao: &User) -> Result<User, DBError> {
         let hashed_password = hash(&self.new_password, 4).unwrap();
         let mut dao = dao.to_owned();
         let w = POOL.new_wrapper().eq("id", &dao.id);
         dao.password = hashed_password;
-        UserDao::update_one(&dao, &w).await?;
-        Ok(dao.into())
+        User::update_one(&dao, &w).await?;
+        Ok(dao)
     }
 }

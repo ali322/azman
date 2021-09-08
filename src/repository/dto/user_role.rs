@@ -1,8 +1,8 @@
 use crate::{
-    repository::{Dao, dao::UserRoleDao, vo::UserRole, DBError, POOL},
-    util::datetime_format::naive_datetime,
+    repository::{dao::UserRole, DBError, Dao, POOL},
+    util::{datetime_format::naive_datetime, default_expire, now},
 };
-use chrono::{Duration, Local, NaiveDateTime};
+use chrono::NaiveDateTime;
 use rbatis::crud::CRUDMut;
 use serde::{Deserialize, Serialize};
 use validator::Validate;
@@ -13,19 +13,16 @@ pub struct UserGrantRole {
     pub role_id: i32,
 }
 
-fn default_expire() -> NaiveDateTime {
-    Local::now().naive_local() + Duration::days(30)
-}
-
 impl UserGrantRole {
     pub async fn save(self) -> Result<UserRole, DBError> {
-        let dao = UserRoleDao {
+        let dao = UserRole {
             user_id: self.user_id,
             role_id: self.role_id,
             expire: default_expire(),
+            created_at: now(),
         };
-        UserRoleDao::create_one(&dao).await?;
-        Ok(dao.into())
+        UserRole::create_one(&dao).await?;
+        Ok(dao)
     }
 }
 
@@ -44,10 +41,10 @@ impl UpdateUserRole {
             .eq("user_id", self.user_id)
             .and()
             .eq("role_id", self.role_id);
-        let mut dao = UserRoleDao::find_one(&w).await?;
+        let mut dao = UserRole::find_one(&w).await?;
         dao.expire = self.expire;
-        UserRoleDao::update_one(&dao, &w).await?;
-        Ok(dao.into())
+        UserRole::update_one(&dao, &w).await?;
+        Ok(dao)
     }
 }
 
@@ -64,7 +61,7 @@ impl UserRevokeRole {
             .eq("user_id", self.user_id)
             .and()
             .eq("role_id", self.role_id);
-        UserRoleDao::delete_one(&w).await
+        UserRole::delete_one(&w).await
     }
 }
 
@@ -78,19 +75,19 @@ impl UserChangeRole {
     pub async fn save(self) -> Result<Vec<UserRole>, DBError> {
         let mut tx = POOL.acquire_begin().await.unwrap();
         let w = POOL.new_wrapper().eq("user_id", &self.user_id);
-        tx.remove_by_wrapper::<UserRoleDao>(&w).await?;
-        let rows: Vec<UserRoleDao> = self
+        tx.remove_by_wrapper::<UserRole>(&w).await?;
+        let rows: Vec<UserRole> = self
             .role_ids
             .iter()
-            .map(|role_id| UserRoleDao {
+            .map(|role_id| UserRole {
                 user_id: self.user_id.clone(),
                 role_id: *role_id,
                 expire: default_expire(),
+                created_at: now(),
             })
             .collect();
         tx.save_batch(&rows, &[]).await?;
         tx.commit().await.unwrap();
-        let all: Vec<UserRole> = rows.into_iter().map(|v| v.into()).collect();
-        Ok(all)
+        Ok(rows)
     }
 }

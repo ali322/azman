@@ -1,4 +1,4 @@
-use crate::repository::{DBError, POOL, Dao};
+use crate::{repository::{DBError, POOL, Dao}, util::datetime_format::naive_datetime};
 use chrono::NaiveDateTime;
 use rbatis::{crud::CRUD, wrapper::Wrapper};
 use app_macro::Dao;
@@ -7,13 +7,16 @@ use async_trait::async_trait;
 
 #[crud_table(table_name: "user_has_roles")]
 #[derive(Debug, Clone, Dao)]
-pub struct UserRoleDao {
+pub struct UserRole {
     pub user_id: String,
     pub role_id: i32,
+    #[serde(serialize_with = "naive_datetime::serialize")]
     pub expire: NaiveDateTime,
+    #[serde(serialize_with = "naive_datetime::serialize")]
+    pub created_at: NaiveDateTime,
 }
 
-impl UserRoleDao {
+impl UserRole {
   pub async fn find_by_id(user_id: &str, role_id: i32) -> Result<Self, DBError> {
     let w = POOL.new_wrapper().eq("user_id", user_id).and().eq("role_id", role_id);
     Self::find_one(&w).await

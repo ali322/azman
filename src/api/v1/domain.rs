@@ -9,9 +9,8 @@ use tower_http::auth::RequireAuthorizationLayer;
 use crate::{
     repository::{
         Dao,
-        dao::DomainDao,
+        dao::Domain,
         dto::{NewDomain, UpdateDomain},
-        vo::Domain,
     },
     util::{jwt::Auth, restrict::Restrict, APIResult},
 };
@@ -21,16 +20,13 @@ async fn all(Extension(auth): Extension<Auth>) -> APIResult {
     if !auth.is_admin {
         return Err(reject!("仅管理员可访问"));
     }
-    let all = DomainDao::find_all()
-        .await?
-        .into_iter()
-        .map(Into::into)
-        .collect::<Vec<Domain>>();
+    let all = Domain::find_all()
+        .await?;
     Ok(reply!(all))
 }
 
 async fn one(Path(id): Path<String>) -> APIResult {
-    let one = DomainDao::find_by_id(&id).await?;
+    let one = Domain::find_by_id(&id).await?;
     Ok(reply!(one))
 }
 

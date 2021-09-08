@@ -1,5 +1,4 @@
-use crate::repository::{Dao, dao::RoleDao, vo::Role, DBError, POOL};
-use chrono::{Local, NaiveDateTime};
+use crate::{repository::{Dao, dao::Role, DBError, POOL}, util::now};
 use serde::{Deserialize, Serialize};
 use validator::Validate;
 
@@ -18,13 +17,9 @@ pub struct NewRole {
     pub created_by: Option<String>
 }
 
-fn now() -> NaiveDateTime {
-    Local::now().naive_local()
-}
-
 impl NewRole {
     pub async fn create(self) -> Result<Role, DBError> {
-        let mut dao = RoleDao {
+        let mut dao = Role {
             id: None,
             name: self.name,
             description: self.description,
@@ -37,9 +32,9 @@ impl NewRole {
             created_at: now(),
             updated_at: now(),
         };
-        let id = RoleDao::create_one(&dao).await?;
+        let id = Role::create_one(&dao).await?;
         dao.id = Some(id as i32);
-        Ok(dao.into())
+        Ok(dao)
     }
 }
 
@@ -59,13 +54,13 @@ pub struct UpdateRole {
 impl UpdateRole {
     pub async fn save(self, id: i32) -> Result<Role, DBError> {
         let w = POOL.new_wrapper().eq("id", id);
-        let mut dao = RoleDao::find_one(&w).await?;
+        let mut dao = Role::find_one(&w).await?;
         dao.name = self.name;
         dao.description = self.description;
         dao.value = self.value;
         dao.level = self.level;
         dao.updated_by = self.updated_by;
-        RoleDao::update_one(&dao, &w).await?;
-        Ok(dao.into())
+        Role::update_one(&dao, &w).await?;
+        Ok(dao)
     }
 }

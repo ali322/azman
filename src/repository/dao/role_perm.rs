@@ -1,17 +1,20 @@
-use crate::repository::{DBError, POOL, Dao};
+use crate::{repository::{DBError, POOL, Dao}, util::datetime_format::naive_datetime};
 use app_macro::Dao;
 use serde::Serialize;
 use async_trait::async_trait;
+use chrono::NaiveDateTime;
 use rbatis::{crud::CRUD, wrapper::Wrapper};
 
 #[crud_table(table_name: "role_has_perms")]
 #[derive(Debug, Clone, Dao)]
-pub struct RolePermDao {
+pub struct RolePerm {
     pub role_id: i32,
     pub perm_id: i32,
+    #[serde(serialize_with = "naive_datetime::serialize")]
+    pub created_at: NaiveDateTime,
 }
 
-impl RolePermDao{
+impl RolePerm{
   pub async fn find_by_id(role_id: i32, perm_id: i32) -> Result<Self, DBError> {
     let w = POOL.new_wrapper().eq("role_id", role_id).and().eq("perm_id", perm_id);
     Self::find_one(&w).await

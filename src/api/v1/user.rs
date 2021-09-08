@@ -1,8 +1,7 @@
 use crate::{
     repository::{
-        dao::UserDao,
+        dao::User,
         dto::{ChangePassword, ResetPassword, UpdateUser},
-        vo::User,
         Dao,
     },
     util::{jwt::Auth, restrict::Restrict, APIResult},
@@ -17,7 +16,7 @@ use tower_http::auth::RequireAuthorizationLayer;
 use validator::Validate;
 
 async fn all() -> APIResult {
-    let all: Vec<User> = UserDao::find_all()
+    let all: Vec<User> = User::find_all()
         .await?
         .into_iter()
         .map(Into::into)
@@ -26,7 +25,7 @@ async fn all() -> APIResult {
 }
 
 async fn one(Path(id): Path<String>) -> APIResult {
-    let one: User = UserDao::find_by_id(&id).await?.into();
+    let one: User = User::find_by_id(&id).await?.into();
     Ok(reply!(one))
 }
 
@@ -41,7 +40,7 @@ async fn change_password(
     Extension(auth): Extension<Auth>,
 ) -> APIResult {
     body.validate()?;
-    let user = match UserDao::find_by_id(&auth.id).await {
+    let user = match User::find_by_id(&auth.id).await {
         Ok(val) => val,
         Err(_) => return Err(reject!("用户不存在")),
     };
@@ -61,7 +60,7 @@ async fn reset_password(
         return Err(reject!("仅管理员可访问"));
     }
     body.validate()?;
-    let user = match UserDao::find_by_id(&id).await {
+    let user = match User::find_by_id(&id).await {
         Ok(val) => val,
         Err(_) => return Err(reject!("用户不存在")),
     };

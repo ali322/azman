@@ -1,4 +1,4 @@
-use crate::repository::{DBError, POOL, Dao};
+use crate::{repository::{DBError, POOL, Dao}, util::datetime_format::naive_datetime};
 use app_macro::Dao;
 use async_trait::async_trait;
 use chrono::NaiveDateTime;
@@ -7,19 +7,21 @@ use rbatis::{crud::CRUD, wrapper::Wrapper};
 
 #[crud_table(table_name: "orgs")]
 #[derive(Debug, Clone, Dao)]
-pub struct OrgDao {
+pub struct Org {
     pub id: String,
     pub name: String,
     pub description: Option<String>,
     pub domain_id: String,
     pub is_deleted: Option<i32>,
+    #[serde(serialize_with = "naive_datetime::serialize")]
     pub created_at: NaiveDateTime,
+    #[serde(serialize_with = "naive_datetime::serialize")]
     pub updated_at: NaiveDateTime,
     pub created_by: Option<String>,
     pub updated_by: Option<String>,
 }
 
-impl OrgDao{
+impl Org{
   pub async fn find_by_ids(id: Vec<String>, domain_id: Option<String>) -> Result<Vec<Self>, DBError> {
     let mut w = POOL.new_wrapper().r#in("id", &id);
     if let Some(domain_id) = domain_id {

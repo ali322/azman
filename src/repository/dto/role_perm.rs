@@ -1,4 +1,4 @@
-use crate::repository::{Dao, dao::RolePermDao, vo::RolePerm, DBError, POOL};
+use crate::{repository::{Dao, dao::RolePerm, DBError, POOL}, util::now};
 use serde::{Deserialize, Serialize};
 use validator::Validate;
 
@@ -10,12 +10,13 @@ pub struct RoleGrantPerm {
 
 impl RoleGrantPerm {
     pub async fn save(self) -> Result<RolePerm, DBError> {
-        let dao = RolePermDao {
+        let dao = RolePerm {
             role_id: self.role_id,
             perm_id: self.perm_id,
+            created_at: now()
         };
-        RolePermDao::create_one(&dao).await?;
-        Ok(dao.into())
+        RolePerm::create_one(&dao).await?;
+        Ok(dao)
     }
 }
 
@@ -32,6 +33,6 @@ impl RoleRevokePerm {
             .eq("perm_id", self.perm_id)
             .and()
             .eq("role_id", self.role_id);
-        RolePermDao::delete_one(&w).await
+        RolePerm::delete_one(&w).await
     }
 }
