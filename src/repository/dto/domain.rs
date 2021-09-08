@@ -1,8 +1,8 @@
 use crate::repository::{DBError, POOL, dao::{DomainDao, RoleDao}, vo::Domain};
-use app_macro::Dao;
 use chrono::{Local, NaiveDateTime};
 use rbatis::crud::CRUDMut;
 use serde::{Deserialize, Serialize};
+use app_macro_trait::Dao;
 use uuid::Uuid;
 use validator::Validate;
 use std::env;

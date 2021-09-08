@@ -1,6 +1,4 @@
-use crate::repository::{dao::RolePermDao, DBError, POOL};
-use app_macro::Dao;
-use rbatis::crud::CRUD;
+use crate::repository::{dao::RolePermDao};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -15,22 +13,5 @@ impl From<RolePermDao> for RolePerm {
             role_id: dao.role_id,
             perm_id: dao.perm_id,
         }
-    }
-}
-
-impl RolePerm {
-    pub async fn find_by_role(role_id: i32) -> Result<Vec<Self>, DBError> {
-        let w = POOL.new_wrapper().eq("role_id", role_id);
-        let all = RolePermDao::find_list(&w).await?;
-        let all: Vec<Self> = all.iter().map(|v| v.clone().into()).collect();
-        Ok(all)
-    }
-    pub async fn find_one(role_id: i32, perm_id: i32) -> Result<RolePermDao, DBError> {
-      let w = POOL
-            .new_wrapper()
-            .eq("role_id", role_id)
-            .and()
-            .eq("perm_id", perm_id);
-      POOL.fetch_by_wrapper::<RolePermDao>(&w).await
     }
 }

@@ -1,9 +1,17 @@
 [package]
 edition = "2018"
 name = "app_macro"
-version = "0.1.0"
+version = "2.0.24"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[lib]
+proc-macro=true
+
+[dependencies.quote]
+version = "1.0"
+
+[dependencies.syn]
+version = "1.0"
+features = ["full"]
 
 [dependencies]
 async-trait = "0.1.51"

@@ -1,19 +1,13 @@
+use app_macro_trait::Dao;
 use axum::{
-    extract::{Extension, Path, Query},
+    extract::{Extension, Path},
     handler::{post, put},
     routing::BoxRoute,
     Json, Router,
 };
-use std::collections::HashMap;
 use tower_http::auth::RequireAuthorizationLayer;
 
-use crate::{
-    repository::{
-        dto::{NewRole, UpdateRole, UpdateUserRole, UserChangeRole, UserGrantRole, UserRevokeRole},
-        vo::{Domain, Role, UserRole},
-    },
-    util::{jwt::Auth, restrict::Restrict, APIResult},
-};
+use crate::{repository::{dao::{DomainDao, RoleDao, UserRoleDao}, dto::{NewRole, UpdateRole, UpdateUserRole, UserChangeRole, UserGrantRole, UserRevokeRole}, vo::{Role, UserRole}}, util::{jwt::Auth, restrict::Restrict, APIResult}};
 use validator::Validate;
 
 async fn all(Extension(auth): Extension<Auth>) -> APIResult {
@@ -22,17 +16,21 @@ async fn all(Extension(auth): Extension<Auth>) -> APIResult {
             return Err(reject!("来源域不能为空"));
         }
         let domain_id = auth.domain_id.clone().unwrap();
-        if Domain::find_one(&domain_id).await.is_err() {
+        if DomainDao::find_by_id(&domain_id).await.is_err() {
             return Err(reject!(format!("来源域 {} 不存在", &domain_id)));
         }
     }
     let domain_id = if auth.is_admin { None } else { auth.domain_id };
-    let all = Role::find_all(domain_id).await?;
+    let all: Vec<Role> = RoleDao::find_all(domain_id)
+        .await?
+        .into_iter()
+        .map(Into::into)
+        .collect();
     Ok(reply!(all))
 }
 
 async fn one(Path(id): Path<i32>) -> APIResult {
-    let one = Role::find_one(id).await?;
+    let one: Role = RoleDao::find_by_id(id).await?.into();
     Ok(reply!(one))
 }
 
@@ -42,7 +40,7 @@ async fn create(Json(mut body): Json<NewRole>, Extension(auth): Extension<Auth>)
         None => return Err(reject!("来源域不能为空")),
     };
     if !auth.is_admin {
-        if Domain::find_one(&domain_id).await.is_err() {
+        if DomainDao::find_by_id(&domain_id).await.is_err() {
             return Err(reject!(format!("来源域 {} 不存在", &domain_id)));
         }
         if auth.role_level > 1 {
@@ -65,7 +63,7 @@ async fn update(
         Some(val) => val,
         None => return Err(reject!("来源域不能为空")),
     };
-    let found = Role::find_one(id).await?;
+    let found: Role = RoleDao::find_by_id(id).await?.into();
     if !auth.is_admin {
         if auth.role_level > 1 {
             return Err(reject!(format!("仅域管理员可操作")));
@@ -85,7 +83,7 @@ async fn remove(Path(id): Path<i32>, Extension(auth): Extension<Auth>) -> APIRes
         Some(val) => val,
         None => return Err(reject!("来源域不能为空")),
     };
-    let found = Role::find_one(id).await?;
+    let found: Role = RoleDao::find_by_id(id).await?.into();
     if !auth.is_admin {
         if auth.role_level > 1 {
             return Err(reject!(format!("仅域管理员可操作")));
@@ -94,13 +92,13 @@ async fn remove(Path(id): Path<i32>, Extension(auth): Extension<Auth>) -> APIRes
             return Err(reject!(format!("角色 {:?} 不属于来源域", found.id)));
         }
     }
-    let removed = Role::delete_one(id).await?;
+    let removed = RoleDao::delete_by_id(id).await?;
     Ok(reply!(removed))
 }
 
 async fn grant(Json(body): Json<UserGrantRole>, Extension(auth): Extension<Auth>) -> APIResult {
     if !auth.is_admin {
-        let role = Role::find_one(body.role_id).await?;
+        let role: Role = RoleDao::find_by_id(body.role_id).await?.into();
         // let user = guard!(User::find_one(body.user_id, &conn));
         if role.domain_id != auth.domain_id.unwrap() {
             return Err(reject!(format!("角色 {:?} 不属于来源域", role.id)));
@@ -109,7 +107,7 @@ async fn grant(Json(body): Json<UserGrantRole>, Extension(auth): Extension<Auth>
             return Err(reject!(format!("角色 {:?} 超过当前角色层级", role.id)));
         }
     }
-    if UserRole::find_one(&body.user_id, body.role_id)
+    if UserRoleDao::find_by_id(&body.user_id, body.role_id)
         .await
         .is_ok()
     {
@@ -124,7 +122,7 @@ async fn grant(Json(body): Json<UserGrantRole>, Extension(auth): Extension<Auth>
 
 async fn revoke(Json(body): Json<UserRevokeRole>, Extension(auth): Extension<Auth>) -> APIResult {
     if !auth.is_admin {
-        let role = Role::find_one(body.role_id).await?;
+        let role: Role = RoleDao::find_by_id(body.role_id).await?.into();
         // let user = guard!(User::find_one(body.user_id, &conn));
         if role.domain_id != auth.domain_id.unwrap() {
             return Err(reject!(format!("角色 {:?} 不属于来源域", role.id)));
@@ -133,7 +131,7 @@ async fn revoke(Json(body): Json<UserRevokeRole>, Extension(auth): Extension<Aut
             return Err(reject!(format!("角色 {:?} 超过当前角色层级", role.id)));
         }
     }
-    if UserRole::find_one(&body.user_id, body.role_id)
+    if UserRoleDao::find_by_id(&body.user_id, body.role_id)
         .await
         .is_err()
     {
@@ -148,7 +146,11 @@ async fn revoke(Json(body): Json<UserRevokeRole>, Extension(auth): Extension<Aut
 
 async fn change(Json(body): Json<UserChangeRole>, Extension(auth): Extension<Auth>) -> APIResult {
     if !auth.is_admin {
-        let roles = Role::find_by_ids(body.role_ids.clone(), auth.domain_id).await?;
+        let roles: Vec<Role> = RoleDao::find_by_ids(body.role_ids.clone(), auth.domain_id)
+            .await?
+            .into_iter()
+            .map(Into::into)
+            .collect();
         for role in roles {
             if role.level < auth.role_level {
                 return Err(reject!(format!("角色 {:?} 超过当前角色层级", role.id)));
@@ -161,7 +163,7 @@ async fn change(Json(body): Json<UserChangeRole>, Extension(auth): Extension<Aut
 
 async fn expire(Json(body): Json<UpdateUserRole>, Extension(auth): Extension<Auth>) -> APIResult {
     if !auth.is_admin {
-        let role = Role::find_one(body.role_id).await?;
+        let role: Role = RoleDao::find_by_id(body.role_id).await?.into();
         // let user = guard!(User::find_one(body.user_id, &conn));
         if role.domain_id != auth.domain_id.unwrap() {
             return Err(reject!(format!("角色 {:?} 不属于来源域", role.id)));

@@ -1,3 +1,4 @@
+use app_macro_trait::Dao;
 use axum::{
     extract::{Extension, Path},
     handler::{post, put},
@@ -6,13 +7,7 @@ use axum::{
 };
 use tower_http::auth::RequireAuthorizationLayer;
 
-use crate::{
-    repository::{
-        dto::{NewPerm, RoleGrantPerm, RoleRevokePerm, UpdatePerm},
-        vo::{Domain, Perm, Role, RolePerm},
-    },
-    util::{jwt::Auth, restrict::Restrict, APIResult},
-};
+use crate::{repository::{dao::{DomainDao, PermDao, RoleDao, RolePermDao}, dto::{NewPerm, RoleGrantPerm, RoleRevokePerm, UpdatePerm}, vo::{Perm, Role, RolePerm}}, util::{jwt::Auth, restrict::Restrict, APIResult}};
 use validator::Validate;
 
 async fn all(Extension(auth): Extension<Auth>) -> APIResult {
@@ -21,17 +16,21 @@ async fn all(Extension(auth): Extension<Auth>) -> APIResult {
             return Err(reject!("来源域不能为空"));
         }
         let domain_id = auth.domain_id.clone().unwrap();
-        if Domain::find_one(&domain_id).await.is_err() {
+        if DomainDao::find_by_id(&domain_id).await.is_err() {
             return Err(reject!(format!("来源域 {} 不存在", &domain_id)));
         }
     }
     let domain_id = if auth.is_admin { None } else { auth.domain_id };
-    let all = Perm::find_all(domain_id).await?;
+    let all = PermDao::find_all(domain_id)
+        .await?
+        .into_iter()
+        .map(Into::into)
+        .collect::<Vec<Perm>>();
     Ok(reply!(all))
 }
 
 async fn one(Path(id): Path<i32>) -> APIResult {
-    let one = Perm::find_one(id).await?;
+    let one: Perm = PermDao::find_by_id(id).await?.into();
     Ok(reply!(one))
 }
 
@@ -41,7 +40,7 @@ async fn create(Json(mut body): Json<NewPerm>, Extension(auth): Extension<Auth>)
         None => return Err(reject!("来源域不能为空")),
     };
     if !auth.is_admin {
-        if Domain::find_one(&domain_id).await.is_err() {
+        if DomainDao::find_by_id(&domain_id).await.is_err() {
             return Err(reject!(format!("来源域 {} 不存在", domain_id.clone())));
         }
         if auth.role_level > 1 {
@@ -64,7 +63,7 @@ async fn update(
         Some(val) => val,
         None => return Err(reject!("来源域不能为空")),
     };
-    let found = Perm::find_one(id).await?;
+    let found: Perm = PermDao::find_by_id(id).await?.into();
     if !auth.is_admin {
         if auth.role_level > 1 {
             return Err(reject!(format!("仅域管理员可操作")));
@@ -85,8 +84,8 @@ async fn grant(Json(body): Json<RoleGrantPerm>, Extension(auth): Extension<Auth>
         None => return Err(reject!("来源域不能为空")),
     };
     if !auth.is_admin {
-        let role = Role::find_one(body.role_id).await?;
-        let perm = Perm::find_one(body.perm_id).await?;
+        let role: Role = RoleDao::find_by_id(body.role_id).await?.into();
+        let perm: Perm = PermDao::find_by_id(body.perm_id).await?.into();
         if role.domain_id != domain_id {
             return Err(reject!(format!("角色 {:?} 不属于来源域", role.id)));
         } else if perm.domain_id != domain_id {
@@ -96,7 +95,7 @@ async fn grant(Json(body): Json<RoleGrantPerm>, Extension(auth): Extension<Auth>
             return Err(reject!(format!("仅域管理员可操作")));
         }
     }
-    if RolePerm::find_one(body.role_id, body.perm_id).await.is_ok() {
+    if RolePermDao::find_by_id(body.role_id, body.perm_id).await.is_ok() {
         return Err(reject!(format!(
             "角色 {} 已赋予权限 {}",
             body.role_id, body.perm_id
@@ -112,8 +111,8 @@ async fn revoke(Json(body): Json<RoleRevokePerm>, Extension(auth): Extension<Aut
         None => return Err(reject!("来源域不能为空")),
     };
     if !auth.is_admin {
-        let role = Role::find_one(body.role_id).await?;
-        let perm = Perm::find_one(body.perm_id).await?;
+      let role: Role = RoleDao::find_by_id(body.role_id).await?.into();
+      let perm: Perm = PermDao::find_by_id(body.perm_id).await?.into();
         if role.domain_id != domain_id {
             return Err(reject!(format!("角色 {:?} 不属于来源域", role.id)));
         } else if perm.domain_id != domain_id {
@@ -123,7 +122,7 @@ async fn revoke(Json(body): Json<RoleRevokePerm>, Extension(auth): Extension<Aut
             return Err(reject!(format!("仅域管理员可操作")));
         }
     }
-    if RolePerm::find_one(body.role_id, body.perm_id)
+    if RolePermDao::find_by_id(body.role_id, body.perm_id)
         .await
         .is_err()
     {

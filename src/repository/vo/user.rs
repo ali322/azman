@@ -1,8 +1,4 @@
-use crate::{
-    repository::{dao::UserDao, DBError, POOL},
-    util::datetime_format::naive_datetime,
-};
-use app_macro::Dao;
+use crate::{repository::dao::UserDao, util::datetime_format::naive_datetime};
 use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
 
@@ -37,36 +33,5 @@ impl From<UserDao> for User {
             last_logined_at: dao.last_logined_at,
             created_at: dao.created_at,
         }
-    }
-}
-
-impl User {
-    pub async fn find_one(id: &str) -> Result<UserDao, DBError> {
-        let w = POOL.new_wrapper().eq("id", id);
-        UserDao::find_one(&w).await
-    }
-    pub async fn find_all() -> Result<Vec<Self>, DBError> {
-        let w = POOL.new_wrapper();
-        let all = UserDao::find_list(&w).await?;
-        let all: Vec<Self> = all.iter().map(|v| v.clone().into()).collect();
-        Ok(all)
-    }
-    pub async fn find_by_ids(ids: Vec<String>) -> Result<Vec<Self>, DBError> {
-        let w = POOL.new_wrapper().r#in("id", &ids);
-        let all = UserDao::find_list(&w).await?;
-        let all: Vec<Self> = all.iter().map(|v| v.clone().into()).collect();
-        Ok(all)
-    }
-    pub async fn find_by_username(username: &str) -> Result<Self, DBError> {
-        let w = POOL.new_wrapper().eq("username", username);
-        UserDao::find_one(&w).await.map(Into::into)
-    }
-    pub async fn find_by_username_or_email(username_or_email: &str) -> Result<UserDao, DBError> {
-        let w = POOL
-            .new_wrapper()
-            .eq("username", username_or_email)
-            .or()
-            .eq("email", username_or_email);
-        UserDao::find_one(&w).await
     }
 }

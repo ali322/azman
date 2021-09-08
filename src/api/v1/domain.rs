@@ -5,9 +5,11 @@ use axum::{
     Json, Router,
 };
 use tower_http::auth::RequireAuthorizationLayer;
+use app_macro_trait::Dao;
 
 use crate::{
     repository::{
+        dao::DomainDao,
         dto::{NewDomain, UpdateDomain},
         vo::Domain,
     },
@@ -19,12 +21,16 @@ async fn all(Extension(auth): Extension<Auth>) -> APIResult {
     if !auth.is_admin {
         return Err(reject!("仅管理员可访问"));
     }
-    let all = Domain::find_all().await?;
+    let all = DomainDao::find_all()
+        .await?
+        .into_iter()
+        .map(Into::into)
+        .collect::<Vec<Domain>>();
     Ok(reply!(all))
 }
 
 async fn one(Path(id): Path<String>) -> APIResult {
-    let one = Domain::find_one(&id).await?;
+    let one = DomainDao::find_by_id(&id).await?;
     Ok(reply!(one))
 }
 

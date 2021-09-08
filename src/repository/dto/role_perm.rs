@@ -1,6 +1,6 @@
 use crate::repository::{dao::RolePermDao, vo::RolePerm, DBError, POOL};
-use app_macro::Dao;
 use serde::{Deserialize, Serialize};
+use app_macro_trait::Dao;
 use validator::Validate;
 
 #[derive(Debug, Deserialize, Serialize, Validate)]

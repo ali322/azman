@@ -1,8 +1,8 @@
 use crate::repository::{dao::RoleDao, vo::Role, DBError, POOL};
 use chrono::{Local, NaiveDateTime};
 use serde::{Deserialize, Serialize};
+use app_macro_trait::Dao;
 use validator::Validate;
-use app_macro::Dao;
 
 #[derive(Debug, Deserialize, Serialize, Validate)]
 pub struct NewRole {

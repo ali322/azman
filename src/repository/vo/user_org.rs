@@ -1,10 +1,5 @@
-use crate::{
-    repository::{dao::UserOrgDao, DBError, POOL},
-    util::datetime_format::naive_datetime,
-};
-use app_macro::Dao;
+use crate::{repository::dao::UserOrgDao, util::datetime_format::naive_datetime};
 use chrono::NaiveDateTime;
-use rbatis::crud::CRUD;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -22,28 +17,5 @@ impl From<UserOrgDao> for UserOrg {
             org_id: dao.org_id,
             expire: dao.expire,
         }
-    }
-}
-
-impl UserOrg {
-    pub async fn find_by_user(user_id: &str) -> Result<Vec<Self>, DBError> {
-        let w = POOL.new_wrapper().eq("user_id", user_id);
-        let all = UserOrgDao::find_list(&w).await?;
-        let all: Vec<Self> = all.into_iter().map(|v| v.into()).collect();
-        Ok(all)
-    }
-    pub async fn find_by_org(org_id: &str) -> Result<Vec<Self>, DBError> {
-        let w = POOL.new_wrapper().eq("org_id", org_id);
-        let all = UserOrgDao::find_list(&w).await?;
-        let all: Vec<Self> = all.into_iter().map(|v| v.into()).collect();
-        Ok(all)
-    }
-    pub async fn find_one(user_id: &str, org_id: &str) -> Result<UserOrgDao, DBError> {
-      let w = POOL
-            .new_wrapper()
-            .eq("user_id", user_id)
-            .and()
-            .eq("org_id", org_id);
-      POOL.fetch_by_wrapper(&w).await
     }
 }

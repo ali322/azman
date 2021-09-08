@@ -1,7 +1,8 @@
 use crate::repository::{DBError, POOL};
 use app_macro::Dao;
-use app_macro_derive::Dao;
+use app_macro_trait::Dao;
 use async_trait::async_trait;
+use serde::Serialize;
 use chrono::NaiveDateTime;
 use rbatis::{crud::CRUD, wrapper::Wrapper};
 

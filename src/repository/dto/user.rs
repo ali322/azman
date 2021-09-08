@@ -1,8 +1,8 @@
 use crate::repository::{dao::UserDao, vo::User, DBError, POOL};
-use app_macro::Dao;
 use bcrypt::{hash, verify};
 use chrono::{Local, NaiveDateTime};
 use serde::{Deserialize, Serialize};
+use app_macro_trait::Dao;
 use uuid::Uuid;
 use validator::Validate;
 

@@ -7,7 +7,7 @@ edition = "2018"
 
 [dependencies]
 app_macro = {path = "./app_macro"}
-app_macro_derive = {path = "./app_macro_derive"}
+app_macro_trait = {path = "./app_macro_trait"}
 axum = "0.2.3"
 bcrypt = "0.10.1"
 chrono = { version = "0.4.19", features = ["serde"] }

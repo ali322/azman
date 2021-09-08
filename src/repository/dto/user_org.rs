@@ -1,7 +1,6 @@
 use crate::repository::{dao::UserOrgDao, vo::UserOrg, DBError, POOL};
-use app_macro::Dao;
 use chrono::{Duration, Local, NaiveDateTime};
-use rbatis::crud::CRUD;
+use app_macro_trait::Dao;
 use serde::{Deserialize, Serialize};
 use validator::Validate;
 

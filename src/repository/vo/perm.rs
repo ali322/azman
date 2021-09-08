@@ -1,8 +1,4 @@
-use crate::{
-    repository::{dao::PermDao, DBError, POOL},
-    util::datetime_format::naive_datetime,
-};
-use app_macro::Dao;
+use crate::{repository::dao::PermDao, util::datetime_format::naive_datetime};
 use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
 
@@ -36,38 +32,5 @@ impl From<PermDao> for Perm {
             created_at: dao.created_at,
             updated_at: dao.updated_at,
         }
-    }
-}
-
-impl Perm {
-    pub async fn find_one(id: i32) -> Result<Self, DBError> {
-        let w = POOL.new_wrapper().eq("id", id);
-        PermDao::find_one(&w).await.map(Into::into)
-    }
-    pub async fn find_all(domain_id: Option<String>) -> Result<Vec<Self>, DBError> {
-        let mut w = POOL.new_wrapper();
-        if let Some(domain_id) = domain_id {
-            w = w.eq("domain_id", domain_id);
-        }
-        let all = PermDao::find_list(&w).await?;
-        let all: Vec<Self> = all.iter().map(|v| v.clone().into()).collect();
-        Ok(all)
-    }
-    pub async fn find_by_ids(
-        ids: Vec<i32>,
-        domain_id: Option<String>,
-    ) -> Result<Vec<Self>, DBError> {
-        let mut w = POOL.new_wrapper().r#in("id", &ids);
-        if let Some(domain_id) = domain_id {
-            w = w.and().eq("domain_id", domain_id);
-        }
-        let all = PermDao::find_list(&w).await?;
-        let all: Vec<Self> = all.iter().map(|v| v.clone().into()).collect();
-        Ok(all)
-    }
-    pub async fn delete_one(id: i32) -> Result<Self, DBError> {
-        let w = POOL.new_wrapper().eq("id", id);
-        PermDao::delete_one(&w).await?;
-        Self::find_one(id as i32).await
     }
 }
