@@ -2,6 +2,8 @@ use axum::{
     routing::BoxRoute,
     Router,
 };
+use tower::layer::layer_fn;
+use crate::util::Cors;
 
 mod role;
 mod perm;
@@ -20,5 +22,6 @@ pub fn apply_routes() -> Router<BoxRoute> {
     v1 = domain::apply_routes(v1.boxed());
     v1 = rbac::apply_routes(v1.boxed());
     v1 = auth::apply_routes(v1.boxed());
+    v1 = v1.layer(layer_fn(|inner|Cors{ inner })).boxed();
     v1
 }
