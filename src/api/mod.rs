@@ -2,7 +2,7 @@ use axum::{Router, handler::get, routing::BoxRoute};
 
 macro_rules! reject {
   ($e: expr) => {
-      crate::util::APIErrror::Custom($e.to_string())
+      crate::util::APIError::Custom($e.to_string())
   };
 }
 

@@ -41,12 +41,12 @@ impl NewRole {
 #[derive(Debug, Clone, Deserialize, Validate)]
 pub struct UpdateRole {
     #[validate(length(min = 1, max = 100))]
-    pub name: String,
+    pub name: Option<String>,
     pub description: Option<String>,
     #[validate(length(min = 1, max = 200))]
-    pub value: String,
+    pub value: Option<String>,
     #[validate(range(min = 2, max = 99))]
-    pub level: i32,
+    pub level: Option<i32>,
     #[serde(skip_deserializing)]
     pub updated_by: Option<String>,
 }
@@ -55,10 +55,16 @@ impl UpdateRole {
     pub async fn save(self, id: &str) -> Result<Role, DBError> {
         let w = POOL.new_wrapper().eq("id", id);
         let mut dao = Role::find_one(&w).await?;
-        dao.name = self.name;
+        if let Some(name) = self.name {
+          dao.name = name;
+        }
+        if let Some(value) = self.value {
+          dao.value = value;
+        }
+        if let Some(level) = self.level {
+          dao.level = level;
+        }
         dao.description = self.description;
-        dao.value = self.value;
-        dao.level = self.level;
         dao.updated_by = self.updated_by;
         Role::update_one(&dao, &w).await?;
         Ok(dao)

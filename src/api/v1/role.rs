@@ -8,9 +8,9 @@ use tower_http::auth::RequireAuthorizationLayer;
 
 use crate::{
     repository::{
-        Dao,
         dao::{Domain, Role, UserRole},
         dto::{NewRole, UpdateRole, UpdateUserRole, UserChangeRole, UserGrantRole, UserRevokeRole},
+        Dao,
     },
     util::{jwt::Auth, restrict::Restrict, APIResult},
 };
@@ -27,8 +27,7 @@ async fn all(Extension(auth): Extension<Auth>) -> APIResult {
         }
     }
     let domain_id = if auth.is_admin { None } else { auth.domain_id };
-    let all: Vec<Role> = Role::find_all(domain_id)
-        .await?;
+    let all: Vec<Role> = Role::find_all(domain_id).await?;
     Ok(reply!(all))
 }
 
@@ -101,8 +100,9 @@ async fn remove(Path(id): Path<String>, Extension(auth): Extension<Auth>) -> API
 
 async fn grant(Json(body): Json<UserGrantRole>, Extension(auth): Extension<Auth>) -> APIResult {
     if !auth.is_admin {
-        let role: Role = Role::find_by_id(&body.role_id).await?.into();
-        // let user = guard!(User::find_one(body.user_id, &conn));
+        let role: Role = Role::find_by_id(&body.role_id)
+            .await
+            .map_err(|_| reject!(format!("角色 {} 不存在", &body.role_id)))?;
         if role.domain_id != auth.domain_id.unwrap() {
             return Err(reject!(format!("角色 {:?} 不属于来源域", role.id)));
         }
@@ -125,8 +125,9 @@ async fn grant(Json(body): Json<UserGrantRole>, Extension(auth): Extension<Auth>
 
 async fn revoke(Json(body): Json<UserRevokeRole>, Extension(auth): Extension<Auth>) -> APIResult {
     if !auth.is_admin {
-        let role: Role = Role::find_by_id(&body.role_id).await?.into();
-        // let user = guard!(User::find_one(body.user_id, &conn));
+        let role: Role = Role::find_by_id(&body.role_id)
+            .await
+            .map_err(|_| reject!(format!("角色 {} 不存在", &body.role_id)))?;
         if role.domain_id != auth.domain_id.unwrap() {
             return Err(reject!(format!("角色 {:?} 不属于来源域", role.id)));
         }
@@ -149,8 +150,7 @@ async fn revoke(Json(body): Json<UserRevokeRole>, Extension(auth): Extension<Aut
 
 async fn change(Json(body): Json<UserChangeRole>, Extension(auth): Extension<Auth>) -> APIResult {
     if !auth.is_admin {
-        let roles: Vec<Role> = Role::find_by_ids(body.role_ids.clone(), auth.domain_id)
-            .await?;
+        let roles: Vec<Role> = Role::find_by_ids(body.role_ids.clone(), auth.domain_id).await?;
         for role in roles {
             if role.level < auth.role_level {
                 return Err(reject!(format!("角色 {:?} 超过当前角色层级", role.id)));

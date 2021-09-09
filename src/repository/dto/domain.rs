@@ -77,7 +77,7 @@ impl NewDomain {
 #[derive(Debug, Clone, Deserialize, Validate)]
 pub struct UpdateDomain {
     #[validate(length(min = 1, max = 100))]
-    pub name: String,
+    pub name: Option<String>,
     pub description: Option<String>,
 }
 
@@ -85,7 +85,9 @@ impl UpdateDomain {
     pub async fn save(self, id: &str) -> Result<Domain, DBError> {
         let w = POOL.new_wrapper().eq("id", id);
         let mut dao = Domain::find_one(&w).await?;
-        dao.name = self.name;
+        if let Some(name) = self.name {
+          dao.name = name;
+        }
         dao.description = self.description;
         Domain::update_one(&dao, &w).await?;
         Ok(dao)

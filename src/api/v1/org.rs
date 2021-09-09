@@ -84,7 +84,9 @@ async fn join(Json(body): Json<UserJoinOrg>, Extension(auth): Extension<Auth>) -
         Some(val) => val,
         None => return Err(reject!("来源域不能为空")),
     };
-    let found = Org::find_by_id(&body.org_id).await?;
+    let found = Org::find_by_id(&body.org_id)
+        .await
+        .map_err(|_| reject!(format!("组织 {} 不存在", &body.org_id)))?;
     if !auth.is_admin {
         if auth.role_level > 1 {
             return Err(reject!(format!("仅域管理员可操作")));
@@ -111,7 +113,9 @@ async fn leave(Json(body): Json<UserLeaveOrg>, Extension(auth): Extension<Auth>)
         Some(val) => val,
         None => return Err(reject!("来源域不能为空")),
     };
-    let found = Org::find_by_id(&body.org_id).await?;
+    let found = Org::find_by_id(&body.org_id)
+        .await
+        .map_err(|_| reject!(format!("组织 {} 不存在", &body.org_id)))?;
     if !auth.is_admin {
         if auth.role_level > 1 {
             return Err(reject!(format!("仅域管理员可操作")));
