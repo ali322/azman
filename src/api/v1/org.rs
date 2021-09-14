@@ -1,5 +1,5 @@
 use axum::{
-    extract::{Extension, Path},
+    extract::{Extension, Path, Query},
     handler::{post, put},
     routing::BoxRoute,
     Json, Router,
@@ -8,7 +8,7 @@ use axum::{
 use crate::{
     repository::{
         dao::{Domain, Org, UserOrg},
-        dto::{NewOrg, UpdateOrg, UserJoinOrg, UserLeaveOrg},
+        dto::{NewOrg, QueryPerm, UpdateOrg, UserJoinOrg, UserLeaveOrg},
         Dao,
     },
     util::{jwt::Auth, restrict::Restrict, APIResult},
@@ -16,7 +16,7 @@ use crate::{
 use tower_http::auth::RequireAuthorizationLayer;
 use validator::Validate;
 
-async fn all(Extension(auth): Extension<Auth>) -> APIResult {
+async fn all(Query(q): Query<QueryPerm>, Extension(auth): Extension<Auth>) -> APIResult {
     if !auth.is_admin {
         if auth.domain_id.is_none() {
             return Err(reject!("来源域不能为空"));
@@ -27,7 +27,8 @@ async fn all(Extension(auth): Extension<Auth>) -> APIResult {
         }
     }
     let domain_id = if auth.is_admin { None } else { auth.domain_id };
-    let all: Vec<Org> = Org::find_all(domain_id).await?;
+    let all = q.find_all(domain_id).await?;
+    // let all: Vec<Org> = Org::find_all(domain_id).await?;
     Ok(reply!(all))
 }
 

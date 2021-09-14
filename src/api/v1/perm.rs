@@ -1,5 +1,5 @@
 use axum::{
-    extract::{Extension, Path},
+    extract::{Extension, Path, Query},
     handler::{post, put},
     routing::BoxRoute,
     Json, Router,
@@ -9,14 +9,14 @@ use tower_http::auth::RequireAuthorizationLayer;
 use crate::{
     repository::{
         dao::{Domain, Perm, Role, RolePerm},
-        dto::{NewPerm, RoleGrantPerm, RoleRevokePerm, UpdatePerm},
+        dto::{NewPerm, QueryPerm, RoleGrantPerm, RoleRevokePerm, UpdatePerm},
         Dao,
     },
     util::{jwt::Auth, restrict::Restrict, APIResult},
 };
 use validator::Validate;
 
-async fn all(Extension(auth): Extension<Auth>) -> APIResult {
+async fn all(Query(q): Query<QueryPerm>, Extension(auth): Extension<Auth>) -> APIResult {
     if !auth.is_admin {
         if auth.domain_id.is_none() {
             return Err(reject!("来源域不能为空"));
@@ -27,7 +27,8 @@ async fn all(Extension(auth): Extension<Auth>) -> APIResult {
         }
     }
     let domain_id = if auth.is_admin { None } else { auth.domain_id };
-    let all = Perm::find_all(domain_id).await?;
+    // let all = Perm::find_all(domain_id).await?;
+    let all = q.find_all(domain_id).await?;
     Ok(reply!(all))
 }
 

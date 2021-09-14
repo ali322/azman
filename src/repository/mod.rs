@@ -4,7 +4,7 @@ use futures::executor::block_on;
 
 pub mod dao;
 pub mod dto;
-// pub mod vo;
+pub mod vo;
 pub mod traits;
 
 pub use traits::Dao;

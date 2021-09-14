@@ -1,4 +1,8 @@
-use crate::{repository::{Dao, dao::Role, DBError, POOL}, util::{now, uuid_v4}};
+use crate::{
+    repository::{dao::Role, vo, DBError, Dao, POOL},
+    util::{now, uuid_v4},
+};
+use rbatis::plugin::page::{Page, PageRequest};
 use serde::{Deserialize, Serialize};
 use validator::Validate;
 
@@ -14,7 +18,7 @@ pub struct NewRole {
     #[serde(skip_deserializing)]
     pub domain_id: String,
     #[serde(skip_deserializing)]
-    pub created_by: Option<String>
+    pub created_by: Option<String>,
 }
 
 impl NewRole {
@@ -56,13 +60,13 @@ impl UpdateRole {
         let w = POOL.new_wrapper().eq("id", id);
         let mut dao = Role::find_one(&w).await?;
         if let Some(name) = self.name {
-          dao.name = name;
+            dao.name = name;
         }
         if let Some(value) = self.value {
-          dao.value = value;
+            dao.value = value;
         }
         if let Some(level) = self.level {
-          dao.level = level;
+            dao.level = level;
         }
         dao.description = self.description;
         dao.updated_by = self.updated_by;
@@ -70,3 +74,52 @@ impl UpdateRole {
         Ok(dao)
     }
 }
+
+#[derive(Debug, Deserialize, Validate)]
+pub struct QueryRole {
+    key: Option<String>,
+    #[validate(range(min = 1))]
+    page: Option<u64>,
+    #[validate(range(min = 1))]
+    limit: Option<u64>,
+    sort_by: Option<String>,
+    sort_order: Option<String>,
+}
+
+impl QueryRole {
+    pub async fn find_all(self, domain_id: Option<String>) -> Result<Page<vo::Role>, DBError> {
+        let page = self.page.unwrap_or(1);
+        let limit = self.limit.unwrap_or(10);
+        let req = PageRequest::new(page, limit);
+        let sort_by = self.sort_by.unwrap_or("created_at".to_string());
+        let sort_order = self.sort_order.unwrap_or("DESC".to_string());
+        if let Some(domain_id) = domain_id {
+            let ret = find_page_by_domain(&req, &domain_id, &sort_by, &sort_order).await?;
+            Ok(ret)
+        } else {
+            let ret = find_page(&req, &sort_by, &sort_order).await?;
+            Ok(ret)
+        }
+    }
+}
+
+#[py_sql(
+    POOL,
+    "select r.id, r.name, r.value, r.level, r.is_deleted, r.created_at, r.updated_at, d.id as `domain.id` , d.name as `domain.name` 
+from roles r left join domains d on d.id = r.domain_id 
+where r.domain_id = #{domain_id} order by r.${sort_by} ${sort_order}"
+)]
+async fn find_page_by_domain(
+    page_req: &PageRequest,
+    domain_id: &str,
+    sort_by: &str,
+    sort_order: &str,
+) -> Page<vo::Role> {
+}
+
+#[py_sql(
+    POOL,
+    "select r.id, r.name, r.value, r.level, r.is_deleted, r.created_at, r.updated_at, d.id as `domain_id` , d.name as `domain_name` 
+from roles r left join domains d on d.id = r.domain_id order by r.${sort_by} ${sort_order}"
+)]
+async fn find_page(page_req: &PageRequest, sort_by: &str, sort_order: &str) -> Page<vo::Role> {}
