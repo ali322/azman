@@ -1,4 +1,4 @@
-use axum::http::{Request, Response, header::{ACCESS_CONTROL_ALLOW_HEADERS, ACCESS_CONTROL_ALLOW_ORIGIN, ACCESS_CONTROL_REQUEST_METHOD}};
+use axum::http::{Request, Response, header::{ACCESS_CONTROL_ALLOW_HEADERS, ACCESS_CONTROL_ALLOW_ORIGIN, ACCESS_CONTROL_ALLOW_METHODS}};
 use futures::future::BoxFuture;
 use std::task::{Context, Poll};
 use tower::Service;
@@ -29,7 +29,7 @@ where
             res.headers_mut()
                 .insert(ACCESS_CONTROL_ALLOW_ORIGIN, "*".parse().unwrap());
             res.headers_mut().insert(ACCESS_CONTROL_ALLOW_HEADERS, "Content-Type, Authorization, Content-Length, X-Requested-With, Accept, x-csrf-token, origin".parse().unwrap());
-            res.headers_mut().insert(ACCESS_CONTROL_REQUEST_METHOD, "GET,PUT,POST,DELETE,OPTIONS".parse().unwrap());
+            res.headers_mut().insert(ACCESS_CONTROL_ALLOW_METHODS, "GET,PUT,POST,DELETE,OPTIONS".parse().unwrap());
             Ok(res)
         })
     }
