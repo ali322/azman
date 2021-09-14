@@ -93,7 +93,7 @@ impl QueryPerm {
 
 #[py_sql(
     POOL,
-    "select r.id, r.name, r.value, r.is_deleted, r.created_at, r.updated_at, d.id as `domain.id` , d.name as `domain.name` 
+    "select r.id, r.name, r.description, r.value, r.is_deleted, r.created_at, r.updated_at, d.id as `domain.id` , d.name as `domain.name` 
 from perms r left join domains d on d.id = r.domain_id 
 where r.domain_id = #{domain_id} order by r.${sort_by} ${sort_order}"
 )]
@@ -107,7 +107,7 @@ async fn find_page_by_domain(
 
 #[py_sql(
     POOL,
-    "select r.id, r.name, r.value, r.is_deleted, r.created_at, r.updated_at, d.id as `domain_id` , d.name as `domain_name` 
+    "select r.id, r.name, r.description, r.value, r.is_deleted, r.created_at, r.updated_at, d.id as `domain_id` , d.name as `domain_name` 
 from perms r left join domains d on d.id = r.domain_id order by r.${sort_by} ${sort_order}"
 )]
 async fn find_page(page_req: &PageRequest, sort_by: &str, sort_order: &str) -> Page<vo::Perm> {}
