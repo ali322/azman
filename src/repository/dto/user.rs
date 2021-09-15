@@ -165,3 +165,18 @@ impl ResetPassword {
         Ok(dao)
     }
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct QueryUser{
+  pub key: Option<String>
+}
+
+impl QueryUser{
+  pub async fn find_all(self) -> Result<Vec<User>, DBError> {
+    let mut w = POOL.new_wrapper();
+    if let Some(k) = self.key {
+      w = w.like("username", &k);
+    }
+    User::find_list(&w).await
+  }
+}

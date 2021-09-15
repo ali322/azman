@@ -31,12 +31,8 @@ impl UserRole {
     }
     pub async fn find_by_user(
         user_id: &str,
-        domain_id: Option<&str>,
     ) -> Result<Vec<Self>, DBError> {
         let mut w = POOL.new_wrapper().eq("user_id", user_id);
-        if let Some(domain_id) = domain_id {
-            w = w.and().eq("domain_id", domain_id)
-        }
         Self::find_list(&w).await
     }
     pub async fn find_by_role(role_id: &str) -> Result<Vec<Self>, DBError> {

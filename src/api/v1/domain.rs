@@ -17,9 +17,6 @@ use crate::{
 use validator::Validate;
 
 async fn all(Extension(auth): Extension<Auth>) -> APIResult {
-    if !auth.is_admin {
-        return Err(reject!("仅管理员可访问"));
-    }
     let all = Domain::find_all()
         .await?;
     Ok(reply!(all))

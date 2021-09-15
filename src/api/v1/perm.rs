@@ -32,7 +32,7 @@ async fn create(Json(mut body): Json<NewPerm>, Extension(auth): Extension<Auth>)
         Ok(val) => val,
         Err(_) => return Err(reject!(format!("来源域 {} 不存在", &body.domain_id))),
     };
-    let user_roles = UserRole::find_by_user(&auth.id, Some(&body.domain_id)).await?;
+    let user_roles = UserRole::find_by_user(&auth.id).await?;
     if !auth.is_admin
         && !user_roles
             .into_iter()
@@ -54,7 +54,7 @@ async fn update(
     let found = Perm::find_by_id(&id)
         .await
         .map_err(|_| reject!(format!("权限 {} 不存在", &id)))?;
-    let user_roles = UserRole::find_by_user(&auth.id, Some(&found.domain_id)).await?;
+    let user_roles = UserRole::find_by_user(&auth.id).await?;
     let domain = Domain::find_by_id(&found.domain_id).await?;
     if !auth.is_admin
         && !user_roles
@@ -73,7 +73,7 @@ async fn remove(Path(id): Path<String>, Extension(auth): Extension<Auth>) -> API
     let found = Perm::find_by_id(&id)
         .await
         .map_err(|_| reject!(format!("权限 {} 不存在", &id)))?;
-    let user_roles = UserRole::find_by_user(&auth.id, Some(&found.domain_id)).await?;
+    let user_roles = UserRole::find_by_user(&auth.id).await?;
     let domain = Domain::find_by_id(&found.domain_id).await?;
     if !auth.is_admin
         && !user_roles
@@ -96,7 +96,7 @@ async fn grant(Json(body): Json<RoleGrantPerm>, Extension(auth): Extension<Auth>
     if role.domain_id != perm.domain_id {
         return Err(reject!("角色和权限不属于同一个域"));
     }
-    let user_roles = UserRole::find_by_user(&auth.id, Some(&role.domain_id)).await?;
+    let user_roles = UserRole::find_by_user(&auth.id).await?;
     let domain = Domain::find_by_id(&role.domain_id).await?;
     if !auth.is_admin
         && !user_roles
@@ -128,7 +128,7 @@ async fn revoke(Json(body): Json<RoleRevokePerm>, Extension(auth): Extension<Aut
     if role.domain_id != perm.domain_id {
         return Err(reject!("角色和权限不属于同一个域"));
     }
-    let user_roles = UserRole::find_by_user(&auth.id, Some(&role.domain_id)).await?;
+    let user_roles = UserRole::find_by_user(&auth.id).await?;
     let domain = Domain::find_by_id(&role.domain_id).await?;
     if !auth.is_admin
         && !user_roles

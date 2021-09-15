@@ -35,7 +35,7 @@ async fn create(Json(mut body): Json<NewRole>, Extension(auth): Extension<Auth>)
         Ok(val) => val,
         Err(_) => return Err(reject!(format!("来源域 {} 不存在", &body.domain_id))),
     };
-    let user_roles = UserRole::find_by_user(&auth.id, Some(&body.domain_id)).await?;
+    let user_roles = UserRole::find_by_user(&auth.id).await?;
     if !auth.is_admin
         && !user_roles
             .into_iter()
@@ -57,7 +57,7 @@ async fn update(
     let found: Role = Role::find_by_id(&id)
         .await
         .map_err(|_| reject!(format!("角色 {} 不存在", &id)))?;
-    let user_roles = UserRole::find_by_user(&auth.id, Some(&found.domain_id)).await?;
+    let user_roles = UserRole::find_by_user(&auth.id).await?;
     let domain = Domain::find_by_id(&found.domain_id).await?;
     if !auth.is_admin
         && !user_roles
@@ -76,7 +76,7 @@ async fn remove(Path(id): Path<String>, Extension(auth): Extension<Auth>) -> API
     let found: Role = Role::find_by_id(&id)
         .await
         .map_err(|_| reject!(format!("角色 {} 不存在", &id)))?;
-    let user_roles = UserRole::find_by_user(&auth.id, Some(&found.domain_id)).await?;
+    let user_roles = UserRole::find_by_user(&auth.id).await?;
     let domain = Domain::find_by_id(&found.domain_id).await?;
     if !auth.is_admin
         && !user_roles
@@ -93,7 +93,7 @@ async fn grant(Json(mut body): Json<UserGrantRole>, Extension(auth): Extension<A
     let role: Role = Role::find_by_id(&body.role_id)
         .await
         .map_err(|_| reject!(format!("角色 {} 不存在", &body.role_id)))?;
-    let user_roles = UserRole::find_by_user(&auth.id, Some(&role.domain_id)).await?;
+    let user_roles = UserRole::find_by_user(&auth.id).await?;
     if !auth.is_admin && !user_roles.into_iter().any(|v| v.role_level < role.level) {
         return Err(reject!(format!("不能操作高等级角色 {:?}", role.id)));
     }
@@ -115,7 +115,7 @@ async fn revoke(Json(body): Json<UserRevokeRole>, Extension(auth): Extension<Aut
     let role: Role = Role::find_by_id(&body.role_id)
         .await
         .map_err(|_| reject!(format!("角色 {} 不存在", &body.role_id)))?;
-    let user_roles = UserRole::find_by_user(&auth.id, Some(&role.domain_id)).await?;
+    let user_roles = UserRole::find_by_user(&auth.id).await?;
     if !auth.is_admin && !user_roles.into_iter().any(|v| v.role_level < role.level) {
         return Err(reject!(format!("不能操作高等级角色 {:?}", role.id)));
     }
@@ -141,7 +141,7 @@ async fn change(Json(body): Json<UserChangeRole>, Extension(auth): Extension<Aut
             &role.id, &body.domain_id
         )));
     }
-    let user_roles = UserRole::find_by_user(&auth.id, Some(&body.domain_id)).await?;
+    let user_roles = UserRole::find_by_user(&auth.id).await?;
     let user_role = user_roles
         .into_iter()
         .min_by(|x, y| x.role_level.cmp(&y.role_level))
@@ -158,7 +158,7 @@ async fn expire(Json(body): Json<UpdateUserRole>, Extension(auth): Extension<Aut
     let role: Role = Role::find_by_id(&body.role_id)
         .await
         .map_err(|_| reject!(format!("角色 {} 不存在", &body.role_id)))?;
-    let user_roles = UserRole::find_by_user(&auth.id, Some(&role.domain_id)).await?;
+    let user_roles = UserRole::find_by_user(&auth.id).await?;
     if !auth.is_admin && !user_roles.into_iter().any(|v| v.role_level < role.level) {
         return Err(reject!(format!("不能操作高等级角色 {:?}", role.id)));
     }

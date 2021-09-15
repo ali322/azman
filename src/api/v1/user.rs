@@ -1,13 +1,13 @@
 use crate::{
     repository::{
         dao::User,
-        dto::{ChangePassword, ResetPassword, UpdateUser},
+        dto::{ChangePassword, QueryUser, ResetPassword, UpdateUser},
         Dao,
     },
     util::{jwt::Auth, restrict::Restrict, APIResult},
 };
 use axum::{
-    extract::{Extension, Path},
+    extract::{Extension, Path, Query},
     handler::{get, post, put},
     routing::BoxRoute,
     Json, Router,
@@ -15,7 +15,7 @@ use axum::{
 use tower_http::auth::RequireAuthorizationLayer;
 use validator::Validate;
 
-async fn all() -> APIResult {
+async fn all(Query(q): Query<QueryUser>) -> APIResult {
     let all: Vec<User> = User::find_all()
         .await?
         .into_iter()

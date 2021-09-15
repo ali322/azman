@@ -41,7 +41,7 @@ async fn roles_of_user(Path(id): Path<String>, Extension(_): Extension<Auth>) ->
         Ok(_) => (),
         Err(_) => return Err(reject!(format!("用户 {} 不存在", &id))),
     };
-    let user_roles = UserRole::find_by_user(&id, None).await?;
+    let user_roles = UserRole::find_by_user(&id).await?;
     let role_ids: Vec<String> = user_roles.into_iter().map(|v| v.role_id).collect();
     let roles: Vec<Role> = if role_ids.len() > 0 {
         Role::find_by_ids(role_ids).await?

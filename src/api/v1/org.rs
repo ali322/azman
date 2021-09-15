@@ -32,7 +32,7 @@ async fn create(Json(mut body): Json<NewOrg>, Extension(auth): Extension<Auth>) 
         Ok(val) => val,
         Err(_) => return Err(reject!(format!("来源域 {} 不存在", &body.domain_id))),
     };
-    let user_roles = UserRole::find_by_user(&auth.id, Some(&body.domain_id)).await?;
+    let user_roles = UserRole::find_by_user(&auth.id).await?;
     if !auth.is_admin
         && !user_roles
             .into_iter()
@@ -54,7 +54,7 @@ async fn update(
     let found = Org::find_by_id(&id)
         .await
         .map_err(|_| reject!(format!("组织 {} 不存在", &id)))?;
-    let user_roles = UserRole::find_by_user(&auth.id, Some(&found.domain_id)).await?;
+    let user_roles = UserRole::find_by_user(&auth.id).await?;
     let domain = Domain::find_by_id(&found.domain_id).await?;
     if !auth.is_admin
         && !user_roles
@@ -72,7 +72,7 @@ async fn join(Json(body): Json<UserJoinOrg>, Extension(auth): Extension<Auth>) -
     let found = Org::find_by_id(&body.org_id)
         .await
         .map_err(|_| reject!(format!("组织 {} 不存在", &body.org_id)))?;
-    let user_roles = UserRole::find_by_user(&auth.id, Some(&found.domain_id)).await?;
+    let user_roles = UserRole::find_by_user(&auth.id).await?;
     let domain = Domain::find_by_id(&found.domain_id).await?;
     if !auth.is_admin
         && !user_roles
@@ -98,7 +98,7 @@ async fn leave(Json(body): Json<UserLeaveOrg>, Extension(auth): Extension<Auth>)
     let found = Org::find_by_id(&body.org_id)
         .await
         .map_err(|_| reject!(format!("组织 {} 不存在", &body.org_id)))?;
-    let user_roles = UserRole::find_by_user(&auth.id, Some(&found.domain_id)).await?;
+    let user_roles = UserRole::find_by_user(&auth.id).await?;
     let domain = Domain::find_by_id(&found.domain_id).await?;
     if !auth.is_admin
         && !user_roles
