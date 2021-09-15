@@ -14,8 +14,8 @@ pub struct Domain {
     pub id: String,
     pub name: String,
     pub description: Option<String>,
-    pub default_role_id: Option<String>,
-    pub admin_role_id: Option<String>,
+    pub default_role_id: String,
+    pub admin_role_id: String,
     #[serde(serialize_with = "i32_bool::serialize")]
     pub is_deleted: i32,
     #[serde(serialize_with = "naive_datetime::serialize")]

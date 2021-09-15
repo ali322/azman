@@ -8,7 +8,7 @@ use tower_http::auth::RequireAuthorizationLayer;
 
 use crate::{
     repository::{
-        dao::{Domain, Perm, Role, RolePerm},
+        dao::{Domain, Perm, Role, RolePerm, UserRole},
         dto::{NewPerm, QueryPerm, RoleGrantPerm, RoleRevokePerm, UpdatePerm},
         Dao,
     },
@@ -16,19 +16,9 @@ use crate::{
 };
 use validator::Validate;
 
-async fn all(Query(q): Query<QueryPerm>, Extension(auth): Extension<Auth>) -> APIResult {
-    if !auth.is_admin {
-        if auth.domain_id.is_none() {
-            return Err(reject!("来源域不能为空"));
-        }
-        let domain_id = auth.domain_id.clone().unwrap();
-        if Domain::find_by_id(&domain_id).await.is_err() {
-            return Err(reject!(format!("来源域 {} 不存在", &domain_id)));
-        }
-    }
-    let domain_id = if auth.is_admin { None } else { auth.domain_id };
+async fn all(Query(q): Query<QueryPerm>, Extension(_): Extension<Auth>) -> APIResult {
     // let all = Perm::find_all(domain_id).await?;
-    let all = q.find_all(domain_id).await?;
+    let all = q.find_all().await?;
     Ok(reply!(all))
 }
 
@@ -38,21 +28,20 @@ async fn one(Path(id): Path<String>) -> APIResult {
 }
 
 async fn create(Json(mut body): Json<NewPerm>, Extension(auth): Extension<Auth>) -> APIResult {
-    let domain_id = match auth.domain_id {
-        Some(val) => val,
-        None => return Err(reject!("来源域不能为空")),
+    let domain = match Domain::find_by_id(&body.domain_id).await {
+        Ok(val) => val,
+        Err(_) => return Err(reject!(format!("来源域 {} 不存在", &body.domain_id))),
     };
-    if !auth.is_admin {
-        if Domain::find_by_id(&domain_id).await.is_err() {
-            return Err(reject!(format!("来源域 {} 不存在", domain_id.clone())));
-        }
-        if auth.role_level > 1 {
-            return Err(reject!(format!("仅域管理员可操作")));
-        }
+    let user_roles = UserRole::find_by_user(&auth.id, Some(&body.domain_id)).await?;
+    if !auth.is_admin
+        && !user_roles
+            .into_iter()
+            .any(|v| v.role_id == domain.admin_role_id)
+    {
+        return Err(reject!(format!("仅域管理员可操作")));
     }
     body.validate()?;
     body.created_by = Some(auth.id);
-    body.domain_id = domain_id;
     let created = body.create().await?;
     Ok(reply!(created))
 }
@@ -62,18 +51,17 @@ async fn update(
     Json(mut body): Json<UpdatePerm>,
     Extension(auth): Extension<Auth>,
 ) -> APIResult {
-    let domain_id = match auth.domain_id {
-        Some(val) => val,
-        None => return Err(reject!("来源域不能为空")),
-    };
-    let found: Perm = Perm::find_by_id(&id).await?.into();
-    if !auth.is_admin {
-        if auth.role_level > 1 {
-            return Err(reject!(format!("仅域管理员可操作")));
-        }
-        if found.domain_id != domain_id {
-            return Err(reject!(format!("权限 {:?} 不属于来源域", found.id)));
-        }
+    let found = Perm::find_by_id(&id)
+        .await
+        .map_err(|_| reject!(format!("权限 {} 不存在", &id)))?;
+    let user_roles = UserRole::find_by_user(&auth.id, Some(&found.domain_id)).await?;
+    let domain = Domain::find_by_id(&found.domain_id).await?;
+    if !auth.is_admin
+        && !user_roles
+            .into_iter()
+            .any(|v| v.role_id == domain.admin_role_id)
+    {
+        return Err(reject!(format!("仅域管理员可操作")));
     }
     body.validate()?;
     body.updated_by = Some(auth.id);
@@ -82,43 +70,40 @@ async fn update(
 }
 
 async fn remove(Path(id): Path<String>, Extension(auth): Extension<Auth>) -> APIResult {
-    let domain_id = match auth.domain_id {
-        Some(val) => val,
-        None => return Err(reject!("来源域不能为空")),
-    };
-    let found: Perm = Perm::find_by_id(&id).await?.into();
-    if !auth.is_admin {
-        if auth.role_level > 1 {
-            return Err(reject!(format!("仅域管理员可操作")));
-        }
-        if found.domain_id != domain_id {
-            return Err(reject!(format!("权限 {:?} 不属于来源域", found.id)));
-        }
+    let found = Perm::find_by_id(&id)
+        .await
+        .map_err(|_| reject!(format!("权限 {} 不存在", &id)))?;
+    let user_roles = UserRole::find_by_user(&auth.id, Some(&found.domain_id)).await?;
+    let domain = Domain::find_by_id(&found.domain_id).await?;
+    if !auth.is_admin
+        && !user_roles
+            .into_iter()
+            .any(|v| v.role_id == domain.admin_role_id)
+    {
+        return Err(reject!(format!("仅域管理员可操作")));
     }
     Perm::delete_by_id(&id).await?;
     Ok(reply!(found))
 }
 
 async fn grant(Json(body): Json<RoleGrantPerm>, Extension(auth): Extension<Auth>) -> APIResult {
-    let domain_id = match auth.domain_id {
-        Some(val) => val,
-        None => return Err(reject!("来源域不能为空")),
-    };
-    if !auth.is_admin {
-        let role: Role = Role::find_by_id(&body.role_id)
-            .await
-            .map_err(|_| reject!(format!("角色 {} 不存在", &body.role_id)))?;
-        let perm: Perm = Perm::find_by_id(&body.perm_id)
-            .await
-            .map_err(|_| reject!(format!("权限 {} 不存在", &body.perm_id)))?;
-        if role.domain_id != domain_id {
-            return Err(reject!(format!("角色 {:?} 不属于来源域", role.id)));
-        } else if perm.domain_id != domain_id {
-            return Err(reject!(format!("行为 {:?} 不属于来源域", perm.id)));
-        }
-        if auth.role_level > 1 {
-            return Err(reject!(format!("仅域管理员可操作")));
-        }
+    let role: Role = Role::find_by_id(&body.role_id)
+        .await
+        .map_err(|_| reject!(format!("角色 {} 不存在", &body.role_id)))?;
+    let perm = Perm::find_by_id(&body.perm_id)
+        .await
+        .map_err(|_| reject!(format!("权限 {} 不存在", &body.perm_id)))?;
+    if role.domain_id != perm.domain_id {
+        return Err(reject!("角色和权限不属于同一个域"));
+    }
+    let user_roles = UserRole::find_by_user(&auth.id, Some(&role.domain_id)).await?;
+    let domain = Domain::find_by_id(&role.domain_id).await?;
+    if !auth.is_admin
+        && !user_roles
+            .into_iter()
+            .any(|v| v.role_id == domain.admin_role_id)
+    {
+        return Err(reject!(format!("仅域管理员可操作")));
     }
     if RolePerm::find_by_id(&body.role_id, &body.perm_id)
         .await
@@ -134,25 +119,23 @@ async fn grant(Json(body): Json<RoleGrantPerm>, Extension(auth): Extension<Auth>
 }
 
 async fn revoke(Json(body): Json<RoleRevokePerm>, Extension(auth): Extension<Auth>) -> APIResult {
-    let domain_id = match auth.domain_id {
-        Some(val) => val,
-        None => return Err(reject!("来源域不能为空")),
-    };
-    if !auth.is_admin {
-        let role: Role = Role::find_by_id(&body.role_id)
-            .await
-            .map_err(|_| reject!(format!("角色 {} 不存在", &body.role_id)))?;
-        let perm: Perm = Perm::find_by_id(&body.perm_id)
-            .await
-            .map_err(|_| reject!(format!("权限 {} 不存在", &body.perm_id)))?;
-        if role.domain_id != domain_id {
-            return Err(reject!(format!("角色 {:?} 不属于来源域", role.id)));
-        } else if perm.domain_id != domain_id {
-            return Err(reject!(format!("行为 {:?} 不属于来源域", perm.id)));
-        }
-        if auth.role_level > 1 {
-            return Err(reject!(format!("仅域管理员可操作")));
-        }
+    let role: Role = Role::find_by_id(&body.role_id)
+        .await
+        .map_err(|_| reject!(format!("角色 {} 不存在", &body.role_id)))?;
+    let perm = Perm::find_by_id(&body.perm_id)
+        .await
+        .map_err(|_| reject!(format!("权限 {} 不存在", &body.perm_id)))?;
+    if role.domain_id != perm.domain_id {
+        return Err(reject!("角色和权限不属于同一个域"));
+    }
+    let user_roles = UserRole::find_by_user(&auth.id, Some(&role.domain_id)).await?;
+    let domain = Domain::find_by_id(&role.domain_id).await?;
+    if !auth.is_admin
+        && !user_roles
+            .into_iter()
+            .any(|v| v.role_id == domain.admin_role_id)
+    {
+        return Err(reject!(format!("仅域管理员可操作")));
     }
     if RolePerm::find_by_id(&body.role_id, &body.perm_id)
         .await

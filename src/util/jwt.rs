@@ -10,10 +10,6 @@ use std::env;
 pub struct Auth {
     pub id: String,
     pub username: String,
-    pub domain_id: Option<String>,
-    pub org_id: Vec<String>,
-    pub role_id: Vec<String>,
-    pub role_level: i32,
     pub is_admin: bool,
 }
 

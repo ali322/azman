@@ -46,6 +46,7 @@ CREATE TABLE IF NOT EXISTS `roles`(
 CREATE TABLE IF NOT EXISTS `user_has_roles`(
   `user_id` VARCHAR(50) REFERENCES `users`(`id`),
   `role_id` VARCHAR(50) REFERENCES `roles`(`id`),
+  `role_level` INTEGER NOT NULL,
   `expire` TIMESTAMP NOT NULL,
   `created_at` TIMESTAMP NOT NULL DEFAULT NOW(),
   PRIMARY KEY(`user_id`, `role_id`)

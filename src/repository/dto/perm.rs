@@ -13,7 +13,6 @@ pub struct NewPerm {
     pub description: Option<String>,
     #[validate(length(min = 1, max = 200))]
     pub value: String,
-    #[serde(skip_deserializing)]
     pub domain_id: String,
     #[serde(skip_deserializing)]
     pub created_by: Option<String>,
@@ -66,6 +65,7 @@ impl UpdatePerm {
 #[derive(Debug, Deserialize, Validate)]
 pub struct QueryPerm {
     key: Option<String>,
+    domain_id: Option<String>,
     #[validate(range(min = 1))]
     page: Option<u64>,
     #[validate(range(min = 1))]
@@ -75,13 +75,13 @@ pub struct QueryPerm {
 }
 
 impl QueryPerm {
-    pub async fn find_all(self, domain_id: Option<String>) -> Result<Page<vo::Perm>, DBError> {
+    pub async fn find_all(self) -> Result<Page<vo::Perm>, DBError> {
         let page = self.page.unwrap_or(1);
         let limit = self.limit.unwrap_or(10);
         let req = PageRequest::new(page, limit);
         let sort_by = self.sort_by.unwrap_or("created_at".to_string());
         let sort_order = self.sort_order.unwrap_or("DESC".to_string());
-        if let Some(domain_id) = domain_id {
+        if let Some(domain_id) = self.domain_id {
             let ret = find_page_by_domain(&req, &domain_id, &sort_by, &sort_order).await?;
             Ok(ret)
         } else {

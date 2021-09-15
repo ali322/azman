@@ -7,8 +7,8 @@ use axum::{
 
 use crate::{
     repository::{
-        dao::{Domain, Org, UserOrg},
-        dto::{NewOrg, QueryPerm, UpdateOrg, UserJoinOrg, UserLeaveOrg},
+        dao::{Domain, Org, UserOrg, UserRole},
+        dto::{NewOrg, QueryOrg, UpdateOrg, UserJoinOrg, UserLeaveOrg},
         Dao,
     },
     util::{jwt::Auth, restrict::Restrict, APIResult},
@@ -16,18 +16,8 @@ use crate::{
 use tower_http::auth::RequireAuthorizationLayer;
 use validator::Validate;
 
-async fn all(Query(q): Query<QueryPerm>, Extension(auth): Extension<Auth>) -> APIResult {
-    if !auth.is_admin {
-        if auth.domain_id.is_none() {
-            return Err(reject!("来源域不能为空"));
-        }
-        let domain_id = auth.domain_id.clone().unwrap();
-        if Domain::find_by_id(&domain_id).await.is_err() {
-            return Err(reject!(format!("来源域 {} 不存在", &domain_id)));
-        }
-    }
-    let domain_id = if auth.is_admin { None } else { auth.domain_id };
-    let all = q.find_all(domain_id).await?;
+async fn all(Query(q): Query<QueryOrg>, Extension(_): Extension<Auth>) -> APIResult {
+    let all = q.find_all().await?;
     // let all: Vec<Org> = Org::find_all(domain_id).await?;
     Ok(reply!(all))
 }
@@ -38,20 +28,19 @@ async fn one(Path(id): Path<String>) -> APIResult {
 }
 
 async fn create(Json(mut body): Json<NewOrg>, Extension(auth): Extension<Auth>) -> APIResult {
-    let domain_id = match auth.domain_id {
-        Some(val) => val,
-        None => return Err(reject!("来源域不能为空")),
+    let domain = match Domain::find_by_id(&body.domain_id).await {
+        Ok(val) => val,
+        Err(_) => return Err(reject!(format!("来源域 {} 不存在", &body.domain_id))),
     };
-    if !auth.is_admin {
-        if Domain::find_by_id(&domain_id).await.is_err() {
-            return Err(reject!(format!("来源域 {} 不存在", &domain_id)));
-        }
-        if auth.role_level > 1 {
-            return Err(reject!(format!("仅域管理员可操作")));
-        }
+    let user_roles = UserRole::find_by_user(&auth.id, Some(&body.domain_id)).await?;
+    if !auth.is_admin
+        && !user_roles
+            .into_iter()
+            .any(|v| v.role_id == domain.admin_role_id)
+    {
+        return Err(reject!(format!("仅域管理员可操作")));
     }
     body.validate()?;
-    body.domain_id = domain_id;
     body.created_by = Some(auth.id);
     let created = body.create().await?;
     Ok(reply!(created))
@@ -62,18 +51,17 @@ async fn update(
     Json(body): Json<UpdateOrg>,
     Extension(auth): Extension<Auth>,
 ) -> APIResult {
-    let domain_id = match auth.domain_id {
-        Some(val) => val,
-        None => return Err(reject!("来源域不能为空")),
-    };
-    let found = Org::find_by_id(&id).await?;
-    if !auth.is_admin {
-        if auth.role_level > 1 {
-            return Err(reject!(format!("仅域管理员可操作")));
-        }
-        if found.domain_id != domain_id {
-            return Err(reject!(format!("组织 {:?} 不属于来源域", found.id)));
-        }
+    let found = Org::find_by_id(&id)
+        .await
+        .map_err(|_| reject!(format!("组织 {} 不存在", &id)))?;
+    let user_roles = UserRole::find_by_user(&auth.id, Some(&found.domain_id)).await?;
+    let domain = Domain::find_by_id(&found.domain_id).await?;
+    if !auth.is_admin
+        && !user_roles
+            .into_iter()
+            .any(|v| v.role_id == domain.admin_role_id)
+    {
+        return Err(reject!(format!("仅域管理员可操作")));
     }
     body.validate()?;
     let updated = body.save(&id).await?;
@@ -81,20 +69,17 @@ async fn update(
 }
 
 async fn join(Json(body): Json<UserJoinOrg>, Extension(auth): Extension<Auth>) -> APIResult {
-    let domain_id = match auth.domain_id {
-        Some(val) => val,
-        None => return Err(reject!("来源域不能为空")),
-    };
     let found = Org::find_by_id(&body.org_id)
         .await
         .map_err(|_| reject!(format!("组织 {} 不存在", &body.org_id)))?;
-    if !auth.is_admin {
-        if auth.role_level > 1 {
-            return Err(reject!(format!("仅域管理员可操作")));
-        }
-        if found.domain_id != domain_id {
-            return Err(reject!(format!("组织 {:?} 不属于来源域", found.id)));
-        }
+    let user_roles = UserRole::find_by_user(&auth.id, Some(&found.domain_id)).await?;
+    let domain = Domain::find_by_id(&found.domain_id).await?;
+    if !auth.is_admin
+        && !user_roles
+            .into_iter()
+            .any(|v| v.role_id == domain.admin_role_id)
+    {
+        return Err(reject!(format!("仅域管理员可操作")));
     }
     if UserOrg::find_by_id(&body.user_id, &body.org_id)
         .await
@@ -110,20 +95,17 @@ async fn join(Json(body): Json<UserJoinOrg>, Extension(auth): Extension<Auth>) -
 }
 
 async fn leave(Json(body): Json<UserLeaveOrg>, Extension(auth): Extension<Auth>) -> APIResult {
-    let domain_id = match auth.domain_id {
-        Some(val) => val,
-        None => return Err(reject!("来源域不能为空")),
-    };
     let found = Org::find_by_id(&body.org_id)
         .await
         .map_err(|_| reject!(format!("组织 {} 不存在", &body.org_id)))?;
-    if !auth.is_admin {
-        if auth.role_level > 1 {
-            return Err(reject!(format!("仅域管理员可操作")));
-        }
-        if found.domain_id != domain_id {
-            return Err(reject!(format!("组织 {:?} 不属于来源域", found.id)));
-        }
+    let user_roles = UserRole::find_by_user(&auth.id, Some(&found.domain_id)).await?;
+    let domain = Domain::find_by_id(&found.domain_id).await?;
+    if !auth.is_admin
+        && !user_roles
+            .into_iter()
+            .any(|v| v.role_id == domain.admin_role_id)
+    {
+        return Err(reject!(format!("仅域管理员可操作")));
     }
     if UserOrg::find_by_id(&body.user_id, &body.org_id)
         .await

@@ -1,9 +1,9 @@
 use crate::{
     repository::{
-        dao::{Domain, Role},
+        dao::{Domain, Role, UserRole},
         DBError, Dao, POOL,
     },
-    util::{now, uuid_v4},
+    util::{default_expire, now, uuid_v4},
 };
 use rbatis::crud::CRUDMut;
 use serde::{Deserialize, Serialize};
@@ -15,8 +15,7 @@ pub struct NewDomain {
     #[validate(length(min = 1, max = 100))]
     pub name: String,
     pub description: Option<String>,
-    pub default_role_id: Option<i32>,
-    pub admin_role_id: Option<i32>,
+    pub admin_id: String,
 }
 
 impl NewDomain {
@@ -28,7 +27,7 @@ impl NewDomain {
             .expect("environment variable COMMON_ROLE_NAME must be set");
         let mut tx = POOL.acquire_begin().await.unwrap();
         let admin_role_id = uuid_v4();
-        let new_role = Role {
+        let admin_role = Role {
             id: admin_role_id.clone(),
             name: admin_role_name.clone(),
             description: None,
@@ -41,9 +40,17 @@ impl NewDomain {
             created_by: Some(user_id.to_string()),
             updated_by: Some(user_id.to_string()),
         };
-        tx.save(&new_role, &[]).await?;
+        tx.save(&admin_role, &[]).await?;
+        let user_role = UserRole {
+            user_id: self.admin_id,
+            role_id: admin_role_id.clone(),
+            role_level: admin_role.level,
+            expire: default_expire(),
+            created_at: now(),
+        };
+        tx.save(&user_role, &[]).await?;
         let common_role_id = uuid_v4();
-        let new_role = Role {
+        let common_role = Role {
             id: common_role_id.clone(),
             name: common_role_name.clone(),
             description: None,
@@ -56,13 +63,13 @@ impl NewDomain {
             created_by: Some(user_id.to_string()),
             updated_by: Some(user_id.to_string()),
         };
-        tx.save(&new_role, &[]).await?;
+        tx.save(&common_role, &[]).await?;
         let dao = Domain {
             id: domain_id.clone(),
             name: self.name,
             description: self.description,
-            default_role_id: Some(common_role_id),
-            admin_role_id: Some(admin_role_id),
+            default_role_id: common_role_id,
+            admin_role_id: admin_role_id,
             is_deleted: 0,
             created_at: now(),
             updated_at: now(),
@@ -86,7 +93,7 @@ impl UpdateDomain {
         let w = POOL.new_wrapper().eq("id", id);
         let mut dao = Domain::find_one(&w).await?;
         if let Some(name) = self.name {
-          dao.name = name;
+            dao.name = name;
         }
         dao.description = self.description;
         Domain::update_one(&dao, &w).await?;

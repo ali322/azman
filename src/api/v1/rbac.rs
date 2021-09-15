@@ -20,8 +20,7 @@ use crate::{
 async fn access(Json(body): Json<Access>, Extension(auth): Extension<Auth>) -> APIResult {
     let role_perms = RolePerm::find_by_role(&body.role_id).await?;
     let mut perm_map: HashMap<String, bool> = HashMap::new();
-    let domain_id = if auth.is_admin { None } else { auth.domain_id };
-    let perms = Perm::find_by_ids(body.perm_id, domain_id).await?;
+    let perms = Perm::find_by_ids(body.perm_id, None).await?;
     for perm in perms.into_iter() {
         perm_map.insert(
             perm.name.clone(),
@@ -37,16 +36,15 @@ async fn access(Json(body): Json<Access>, Extension(auth): Extension<Auth>) -> A
     Ok(reply!(perm_map))
 }
 
-async fn roles_of_user(Path(id): Path<String>, Extension(auth): Extension<Auth>) -> APIResult {
+async fn roles_of_user(Path(id): Path<String>, Extension(_): Extension<Auth>) -> APIResult {
     match User::find_by_id(&id).await {
         Ok(_) => (),
         Err(_) => return Err(reject!(format!("用户 {} 不存在", &id))),
     };
-    let user_roles = UserRole::find_by_user(&id).await?;
+    let user_roles = UserRole::find_by_user(&id, None).await?;
     let role_ids: Vec<String> = user_roles.into_iter().map(|v| v.role_id).collect();
-    let domain_id = if auth.is_admin { None } else { auth.domain_id };
     let roles: Vec<Role> = if role_ids.len() > 0 {
-        Role::find_by_ids(role_ids, domain_id).await?
+        Role::find_by_ids(role_ids).await?
     } else {
         vec![]
     };
@@ -68,32 +66,30 @@ async fn users_of_role(Path(id): Path<String>) -> APIResult {
     Ok(reply!(users))
 }
 
-async fn perms_of_role(Path(id): Path<String>, Extension(auth): Extension<Auth>) -> APIResult {
+async fn perms_of_role(Path(id): Path<String>, Extension(_): Extension<Auth>) -> APIResult {
     match Role::find_by_id(&id).await {
         Ok(_) => (),
         Err(_) => return Err(reject!(format!("角色 {} 不存在", &id))),
     };
     let role_perms = RolePerm::find_by_role(&id).await?;
     let perm_ids: Vec<String> = role_perms.into_iter().map(|v| v.perm_id).collect();
-    let domain_id = if auth.is_admin { None } else { auth.domain_id };
     let perms = if perm_ids.len() > 0 {
-        Perm::find_by_ids(perm_ids, domain_id).await?
+        Perm::find_by_ids(perm_ids, None).await?
     } else {
         vec![]
     };
     Ok(reply!(perms))
 }
 
-async fn orgs_of_user(Path(id): Path<String>, Extension(auth): Extension<Auth>) -> APIResult {
+async fn orgs_of_user(Path(id): Path<String>, Extension(_): Extension<Auth>) -> APIResult {
     match User::find_by_id(&id).await {
         Ok(_) => (),
         Err(_) => return Err(reject!(format!("用户 {} 不存在", &id))),
     };
     let user_orgs = UserOrg::find_by_user(&id).await?;
     let org_ids: Vec<String> = user_orgs.iter().map(|v| v.org_id.clone()).collect();
-    let domain_id = if auth.is_admin { None } else { auth.domain_id };
     let orgs = if org_ids.len() > 0 {
-        Org::find_by_ids(org_ids, domain_id).await?
+        Org::find_by_ids(org_ids, None).await?
     } else {
         vec![]
     };

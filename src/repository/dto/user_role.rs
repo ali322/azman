@@ -1,5 +1,5 @@
 use crate::{
-    repository::{dao::UserRole, DBError, Dao, POOL},
+    repository::{dao::{UserRole, Role}, DBError, Dao, POOL},
     util::{serde_format::naive_datetime, default_expire, now},
 };
 use chrono::NaiveDateTime;
@@ -11,6 +11,8 @@ use validator::Validate;
 pub struct UserGrantRole {
     pub user_id: String,
     pub role_id: String,
+    #[serde(skip_deserializing)]
+    pub role_level: i32,
 }
 
 impl UserGrantRole {
@@ -18,6 +20,7 @@ impl UserGrantRole {
         let dao = UserRole {
             user_id: self.user_id,
             role_id: self.role_id,
+            role_level: self.role_level,
             expire: default_expire(),
             created_at: now(),
         };
@@ -69,19 +72,20 @@ impl UserRevokeRole {
 pub struct UserChangeRole {
     pub user_id: String,
     pub role_ids: Vec<String>,
+    pub domain_id: String,
 }
 
 impl UserChangeRole {
-    pub async fn save(self) -> Result<Vec<UserRole>, DBError> {
+    pub async fn save(self, roles: Vec<Role>) -> Result<Vec<UserRole>, DBError> {
         let mut tx = POOL.acquire_begin().await.unwrap();
         let w = POOL.new_wrapper().eq("user_id", &self.user_id);
         tx.remove_by_wrapper::<UserRole>(&w).await?;
-        let rows: Vec<UserRole> = self
-            .role_ids
-            .iter()
-            .map(|role_id| UserRole {
+        let rows: Vec<UserRole> = roles
+            .into_iter()
+            .map(|role, | UserRole {
                 user_id: self.user_id.clone(),
-                role_id: role_id.clone(),
+                role_id: role.id,
+                role_level: role.level,
                 expire: default_expire(),
                 created_at: now(),
             })
