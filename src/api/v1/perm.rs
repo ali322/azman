@@ -90,11 +90,15 @@ async fn grant(Json(body): Json<RoleGrantPerm>, Extension(auth): Extension<Auth>
     let role: Role = Role::find_by_id(&body.role_id)
         .await
         .map_err(|_| reject!(format!("角色 {} 不存在", &body.role_id)))?;
-    let perm = Perm::find_by_id(&body.perm_id)
-        .await
-        .map_err(|_| reject!(format!("权限 {} 不存在", &body.perm_id)))?;
-    if role.domain_id != perm.domain_id {
-        return Err(reject!("角色和权限不属于同一个域"));
+    let perms = Perm::find_by_ids(body.perm_ids.clone(), None).await?;
+    let perm_ids: Vec<String> = perms.iter().map(|v| v.id.clone()).collect();
+    let found = body.perm_ids.iter().find(|v| !perm_ids.contains(&v));
+    if let Some(perm_id) = found {
+        return Err(reject!(format!("权限 {:?} 不存在", perm_id)));
+    }
+    let found = perms.iter().find(|v| v.domain_id != role.domain_id);
+    if let Some(perm) = found {
+        return Err(reject!(format!("权限 {:?} 和角色不属于同一个域", perm.id)));
     }
     let user_roles = UserRole::find_by_user(&auth.id).await?;
     let domain = Domain::find_by_id(&role.domain_id).await?;
@@ -105,13 +109,13 @@ async fn grant(Json(body): Json<RoleGrantPerm>, Extension(auth): Extension<Auth>
     {
         return Err(reject!(format!("仅域管理员可操作")));
     }
-    if RolePerm::find_by_id(&body.role_id, &body.perm_id)
-        .await
-        .is_ok()
-    {
+    let role_perms = RolePerm::find_by_role(&body.role_id).await?;
+    let perm_ids: Vec<String> = role_perms.into_iter().map(|v| v.perm_id.clone()).collect();
+    let found = body.perm_ids.iter().find(|v| perm_ids.contains(&v));
+    if let Some(found) = found {
         return Err(reject!(format!(
             "角色 {} 已赋予权限 {}",
-            body.role_id, body.perm_id
+            &body.role_id, found
         )));
     }
     let granted = body.save().await?;
@@ -122,11 +126,15 @@ async fn revoke(Json(body): Json<RoleRevokePerm>, Extension(auth): Extension<Aut
     let role: Role = Role::find_by_id(&body.role_id)
         .await
         .map_err(|_| reject!(format!("角色 {} 不存在", &body.role_id)))?;
-    let perm = Perm::find_by_id(&body.perm_id)
-        .await
-        .map_err(|_| reject!(format!("权限 {} 不存在", &body.perm_id)))?;
-    if role.domain_id != perm.domain_id {
-        return Err(reject!("角色和权限不属于同一个域"));
+    let perms = Perm::find_by_ids(body.perm_ids.clone(), None).await?;
+    let perm_ids: Vec<String> = perms.iter().map(|v| v.id.clone()).collect();
+    let found = body.perm_ids.iter().find(|v| !perm_ids.contains(&v));
+    if let Some(perm_id) = found {
+        return Err(reject!(format!("权限 {:?} 不存在", perm_id)));
+    }
+    let found = perms.iter().find(|v| v.domain_id != role.domain_id);
+    if let Some(perm) = found {
+        return Err(reject!(format!("权限 {:?} 和角色不属于同一个域", perm.id)));
     }
     let user_roles = UserRole::find_by_user(&auth.id).await?;
     let domain = Domain::find_by_id(&role.domain_id).await?;
@@ -137,13 +145,13 @@ async fn revoke(Json(body): Json<RoleRevokePerm>, Extension(auth): Extension<Aut
     {
         return Err(reject!(format!("仅域管理员可操作")));
     }
-    if RolePerm::find_by_id(&body.role_id, &body.perm_id)
-        .await
-        .is_err()
-    {
+    let role_perms = RolePerm::find_by_role(&body.role_id).await?;
+    let perm_ids: Vec<String> = role_perms.into_iter().map(|v| v.perm_id.clone()).collect();
+    let found = body.perm_ids.iter().find(|v| !perm_ids.contains(&v));
+    if let Some(found) = found {
         return Err(reject!(format!(
             "角色 {} 未赋予权限 {}",
-            body.role_id, body.perm_id
+            &body.role_id, found
         )));
     }
     let revoked = body.save().await?;

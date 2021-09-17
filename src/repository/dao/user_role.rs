@@ -32,7 +32,7 @@ impl UserRole {
     pub async fn find_by_user(
         user_id: &str,
     ) -> Result<Vec<Self>, DBError> {
-        let mut w = POOL.new_wrapper().eq("user_id", user_id);
+        let w = POOL.new_wrapper().eq("user_id", user_id);
         Self::find_list(&w).await
     }
     pub async fn find_by_role(role_id: &str) -> Result<Vec<Self>, DBError> {

@@ -4,6 +4,7 @@ use crate::{
 };
 use bcrypt::{hash, verify};
 use chrono::NaiveDateTime;
+use rbatis::{plugin::page::{Page, PageRequest}, crud::CRUD};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use validator::Validate;
@@ -166,17 +167,31 @@ impl ResetPassword {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct QueryUser{
-  pub key: Option<String>
+#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
+pub struct QueryUser {
+    pub key: Option<String>,
+    #[validate(range(min = 1))]
+    page: Option<u64>,
+    #[validate(range(min = 1))]
+    limit: Option<u64>,
+    sort_by: Option<String>,
+    sort_order: Option<String>,
 }
 
-impl QueryUser{
-  pub async fn find_all(self) -> Result<Vec<User>, DBError> {
-    let mut w = POOL.new_wrapper();
-    if let Some(k) = self.key {
-      w = w.like("username", &k);
+impl QueryUser {
+    pub async fn find_all(self) -> Result<Page<User>, DBError> {
+      let page = self.page.unwrap_or(1);
+      let limit = self.limit.unwrap_or(10);
+      let req = PageRequest::new(page, limit);
+      let sort_by = self.sort_by.unwrap_or("created_at".to_string());
+      let sort_order = self.sort_order.unwrap_or("DESC".to_string());
+      let mut w = POOL.new_wrapper();
+      if let Some(key) = self.key {
+          if key != "" {
+              w = w.and().like("username", key);
+          }
+      }
+      w = w.order_by(&sort_order.to_uppercase() == "ASC", &[&sort_by]);
+      POOL.fetch_page_by_wrapper::<User>(&w, &req).await
     }
-    User::find_list(&w).await
-  }
 }

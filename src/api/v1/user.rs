@@ -16,11 +16,8 @@ use tower_http::auth::RequireAuthorizationLayer;
 use validator::Validate;
 
 async fn all(Query(q): Query<QueryUser>) -> APIResult {
-    let all: Vec<User> = User::find_all()
-        .await?
-        .into_iter()
-        .map(Into::into)
-        .collect();
+    q.validate()?;
+    let all = q.find_all().await?;
     Ok(reply!(all))
 }
 
@@ -69,7 +66,8 @@ async fn reset_password(
 }
 
 async fn me(Extension(auth): Extension<Auth>) -> APIResult {
-    Ok(reply!(auth))
+    let user = User::find_by_id(auth.id).await?;
+    Ok(reply!(user))
 }
 
 pub fn apply_routes(v1: Router<BoxRoute>) -> Router<BoxRoute> {

@@ -16,7 +16,7 @@ use crate::{
 };
 use validator::Validate;
 
-async fn all(Extension(auth): Extension<Auth>) -> APIResult {
+async fn all(Extension(_auth): Extension<Auth>) -> APIResult {
     let all = Domain::find_all()
         .await?;
     Ok(reply!(all))

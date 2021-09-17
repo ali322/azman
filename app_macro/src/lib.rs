@@ -15,6 +15,9 @@ fn impl_dao(ast: &syn::DeriveInput) -> TokenStream {
     let gen = quote! {
       #[async_trait]
       impl Dao for #name{
+        async fn exists<T>(id: T) -> Result<Option<Self>, DBError> where T: Serialize + Send + Sync {
+            POOL.fetch_by_column("id", &id).await
+        }
         async fn find_one(w: &Wrapper) -> Result<Self, DBError> {
             let w = w.to_owned().limit(1);
             POOL.fetch_by_wrapper::<Self>(&w).await
@@ -36,6 +39,10 @@ fn impl_dao(ast: &syn::DeriveInput) -> TokenStream {
         }
         async fn create_one(&self) -> Result<i64, DBError> {
             let created = POOL.save(&self, &[]).await?;
+            Ok(created.last_insert_id.unwrap())
+        }
+        async fn create_all(all: &Vec<Self>) -> Result<i64, DBError> {
+            let created = POOL.save_batch(all, &[]).await?;
             Ok(created.last_insert_id.unwrap())
         }
         async fn update_one(&self, w: &Wrapper) -> Result<u64, DBError> {
