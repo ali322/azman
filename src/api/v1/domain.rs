@@ -8,22 +8,22 @@ use tower_http::auth::RequireAuthorizationLayer;
 
 use crate::{
     repository::{
-        Dao,
-        dao::Domain,
+        dao::{domain, Domain},
         dto::{NewDomain, UpdateDomain},
+        Dao,
     },
     util::{jwt::Auth, restrict::Restrict, APIResult},
 };
 use validator::Validate;
 
 async fn all(Extension(_auth): Extension<Auth>) -> APIResult {
-    let all = Domain::find_all()
-        .await?;
+    let all = Domain::find_all(None).await?;
     Ok(reply!(all))
 }
 
 async fn one(Path(id): Path<String>) -> APIResult {
-    let one = Domain::find_by_id(&id).await?;
+    use domain::IntoVo;
+    let one = Domain::find_by_id(&id).await?.into_vo().await?;
     Ok(reply!(one))
 }
 

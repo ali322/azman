@@ -29,8 +29,12 @@ fn impl_dao(ast: &syn::DeriveInput) -> TokenStream {
         async fn find_list(w: &Wrapper) -> Result<Vec<Self>, DBError> {
             POOL.fetch_list_by_wrapper(&w).await
         }
-        async fn find_all() -> Result<Vec<Self>, DBError> {
-            let w = POOL.new_wrapper().order_by(true, &["created_at"]);
+        async fn find_all(w: Option<&Wrapper>) -> Result<Vec<Self>, DBError> {
+            let w = match w {
+              Some(v) => v.clone(),
+              None => POOL.new_wrapper()
+            };
+            let w = w.order_by(true, &["created_at"]);
             Self::find_list(&w).await
         }
         async fn find_by_ids<T>(id: Vec<T>) -> Result<Vec<Self>, DBError> where T: Serialize + Send + Sync {

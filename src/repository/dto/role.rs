@@ -1,8 +1,6 @@
-use std::collections::HashMap;
-
 use crate::{
     repository::{
-        dao::{Domain, Role},
+        dao::{role::IntoVecOfVo, Role},
         vo, DBError, Dao, POOL,
     },
     util::{now, uuid_v4},
@@ -113,22 +111,7 @@ impl QueryRole {
         w = w.order_by(&sort_order.to_uppercase() == "ASC", &[&sort_by]);
         let ret = POOL.fetch_page_by_wrapper::<Role>(&w, &req).await?;
 
-        let domain_ids: Vec<String> = ret.records.iter().map(|v| v.domain_id.clone()).collect();
-        let w = POOL.new_wrapper().r#in("id", &domain_ids);
-        let domains = POOL.fetch_list_by_wrapper::<Domain>(&w).await?;
-        let mut domain_map = HashMap::new();
-        for domain in domains {
-            domain_map.insert(domain.id.clone(), domain.clone());
-        }
-        let mut records: Vec<vo::Role> = ret
-            .records
-            .iter()
-            .map(|v| vo::Role::from(v.clone()))
-            .collect();
-        for mut r in &mut records {
-            let domain = domain_map.get(&r.domain_id).cloned();
-            r.domain = domain.map(Into::into);
-        }
+        let records = ret.records.into_vo().await?;
         Ok(Page::<vo::Role> {
             records,
             total: ret.total,

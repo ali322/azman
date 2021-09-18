@@ -1,9 +1,14 @@
-use crate::{repository::{DBError, POOL, Dao}, util::serde_format::{naive_datetime, i32_bool}};
+use super::Domain;
+use crate::{
+    repository::{vo, DBError, Dao, POOL},
+    util::serde_format::{i32_bool, naive_datetime},
+};
 use app_macro::Dao;
 use async_trait::async_trait;
 use chrono::NaiveDateTime;
-use serde::Serialize;
 use rbatis::{crud::CRUD, wrapper::Wrapper};
+use serde::Serialize;
+use std::collections::HashMap;
 
 #[crud_table(table_name: "perms")]
 #[derive(Debug, Clone, Dao)]
@@ -23,19 +28,46 @@ pub struct Perm {
     pub updated_by: Option<String>,
 }
 
-impl Perm{
-  pub async fn find_by_ids(id: Vec<String>, domain_id: Option<String>) -> Result<Vec<Self>, DBError> {
-    let mut w = POOL.new_wrapper().r#in("id", &id);
-    if let Some(domain_id) = domain_id {
-      w = w.eq("domain_id", domain_id);
+impl Perm {
+    pub async fn find_by_ids(
+        id: Vec<String>,
+        domain_id: Option<String>,
+    ) -> Result<Vec<Self>, DBError> {
+        let mut w = POOL.new_wrapper().r#in("id", &id);
+        if let Some(domain_id) = domain_id {
+            w = w.eq("domain_id", domain_id);
+        }
+        Self::find_list(&w).await
     }
-    Self::find_list(&w).await
-  }
-  pub async fn find_all(domain_id: Option<String>) -> Result<Vec<Self>, DBError> {
-    let mut w = POOL.new_wrapper();
-    if let Some(domain_id) = domain_id {
-      w = w.eq("domain_id", domain_id);
+    pub async fn find_all(domain_id: Option<String>) -> Result<Vec<Self>, DBError> {
+        let mut w = POOL.new_wrapper();
+        if let Some(domain_id) = domain_id {
+            w = w.eq("domain_id", domain_id);
+        }
+        Self::find_list(&w).await
     }
-    Self::find_list(&w).await
-  }
+}
+
+#[async_trait]
+pub trait IntoVecOfVo {
+    async fn into_vo(&self) -> Result<Vec<vo::Perm>, DBError>;
+}
+
+#[async_trait]
+impl IntoVecOfVo for Vec<Perm> {
+    async fn into_vo(&self) -> Result<Vec<vo::Perm>, DBError> {
+        let domain_ids: Vec<String> = self.iter().map(|v| v.domain_id.clone()).collect();
+        let w = POOL.new_wrapper().r#in("id", &domain_ids);
+        let domains = POOL.fetch_list_by_wrapper::<Domain>(&w).await?;
+        let mut domain_map = HashMap::new();
+        for domain in domains {
+            domain_map.insert(domain.id.clone(), domain.clone());
+        }
+        let mut records: Vec<vo::Perm> = self.iter().map(|v| vo::Perm::from(v.clone())).collect();
+        for mut r in &mut records {
+            let domain = domain_map.get(&r.domain_id).cloned();
+            r.domain = domain.map(Into::into);
+        }
+        Ok(records)
+    }
 }

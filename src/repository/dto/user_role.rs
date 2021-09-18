@@ -1,6 +1,9 @@
 use crate::{
-    repository::{dao::{UserRole, Role}, DBError, Dao, POOL},
-    util::{serde_format::naive_datetime, default_expire, now},
+    repository::{
+        dao::{Role, User, UserRole},
+        DBError, Dao, POOL,
+    },
+    util::{default_expire, now, serde_format::naive_datetime},
 };
 use chrono::NaiveDateTime;
 use rbatis::crud::CRUDMut;
@@ -70,21 +73,20 @@ impl UserRevokeRole {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct UserChangeRole {
-    pub user_id: String,
-    pub role_ids: Vec<String>,
-    pub domain_id: String,
+    pub user_ids: Vec<String>,
+    pub role_id: String,
 }
 
 impl UserChangeRole {
-    pub async fn save(self, roles: Vec<Role>) -> Result<Vec<UserRole>, DBError> {
+    pub async fn save(self, role: Role, users: Vec<User>) -> Result<Vec<UserRole>, DBError> {
         let mut tx = POOL.acquire_begin().await.unwrap();
-        let w = POOL.new_wrapper().eq("user_id", &self.user_id);
+        let w = POOL.new_wrapper().eq("role_id", &self.role_id);
         tx.remove_by_wrapper::<UserRole>(&w).await?;
-        let rows: Vec<UserRole> = roles
+        let rows: Vec<UserRole> = users
             .into_iter()
-            .map(|role, | UserRole {
-                user_id: self.user_id.clone(),
-                role_id: role.id,
+            .map(|user| UserRole {
+                role_id: self.role_id.clone(),
+                user_id: user.id,
                 role_level: role.level,
                 expire: default_expire(),
                 created_at: now(),

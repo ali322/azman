@@ -12,7 +12,7 @@ pub trait Dao: Sized {
     where
         T: Serialize + Send + Sync;
     async fn find_list(w: &Wrapper) -> Result<Vec<Self>, Error>;
-    async fn find_all() -> Result<Vec<Self>, Error>;
+    async fn find_all(w: Option<&Wrapper>) -> Result<Vec<Self>, Error>;
     async fn find_by_ids<T>(id: Vec<T>) -> Result<Vec<Self>, Error>
     where
         T: Serialize + Send + Sync;

@@ -7,7 +7,7 @@ use axum::{
 
 use crate::{
     repository::{
-        dao::{Domain, Org, UserOrg, UserRole},
+        dao::{Domain, Org, User, UserOrg, UserRole},
         dto::{NewOrg, QueryOrg, UpdateOrg, UserJoinOrg, UserLeaveOrg},
         Dao,
     },
@@ -69,11 +69,17 @@ async fn update(
 }
 
 async fn join(Json(body): Json<UserJoinOrg>, Extension(auth): Extension<Auth>) -> APIResult {
-    let found = Org::find_by_id(&body.org_id)
+    let org: Org = Org::find_by_id(&body.org_id)
         .await
         .map_err(|_| reject!(format!("组织 {} 不存在", &body.org_id)))?;
+    let users = User::find_by_ids(body.user_ids.clone()).await?;
+    let user_ids: Vec<String> = users.iter().map(|v| v.id.clone()).collect();
+    let found = body.user_ids.iter().find(|v| !user_ids.contains(&v));
+    if let Some(user_id) = found {
+        return Err(reject!(format!("用户 {:?} 不存在", user_id)));
+    }
     let user_roles = UserRole::find_by_user(&auth.id).await?;
-    let domain = Domain::find_by_id(&found.domain_id).await?;
+    let domain = Domain::find_by_id(&org.domain_id).await?;
     if !auth.is_admin
         && !user_roles
             .into_iter()
@@ -81,13 +87,13 @@ async fn join(Json(body): Json<UserJoinOrg>, Extension(auth): Extension<Auth>) -
     {
         return Err(reject!(format!("仅域管理员可操作")));
     }
-    if UserOrg::find_by_id(&body.user_id, &body.org_id)
-        .await
-        .is_ok()
-    {
+    let user_orgs = UserOrg::find_by_org(&body.org_id).await?;
+    let user_ids: Vec<String> = user_orgs.into_iter().map(|v| v.user_id.clone()).collect();
+    let found = body.user_ids.iter().find(|v| user_ids.contains(&v));
+    if let Some(found) = found {
         return Err(reject!(format!(
-            "用户 {} 已加入组织 {}",
-            &body.user_id, &body.org_id
+            "用户 {} 已参与组织 {}",
+            found, &body.org_id
         )));
     }
     let joined = body.save().await?;
@@ -95,11 +101,17 @@ async fn join(Json(body): Json<UserJoinOrg>, Extension(auth): Extension<Auth>) -
 }
 
 async fn leave(Json(body): Json<UserLeaveOrg>, Extension(auth): Extension<Auth>) -> APIResult {
-    let found = Org::find_by_id(&body.org_id)
+    let org: Org = Org::find_by_id(&body.org_id)
         .await
         .map_err(|_| reject!(format!("组织 {} 不存在", &body.org_id)))?;
+    let users = User::find_by_ids(body.user_ids.clone()).await?;
+    let user_ids: Vec<String> = users.iter().map(|v| v.id.clone()).collect();
+    let found = body.user_ids.iter().find(|v| !user_ids.contains(&v));
+    if let Some(user_id) = found {
+        return Err(reject!(format!("用户 {:?} 不存在", user_id)));
+    }
     let user_roles = UserRole::find_by_user(&auth.id).await?;
-    let domain = Domain::find_by_id(&found.domain_id).await?;
+    let domain = Domain::find_by_id(&org.domain_id).await?;
     if !auth.is_admin
         && !user_roles
             .into_iter()
@@ -107,13 +119,13 @@ async fn leave(Json(body): Json<UserLeaveOrg>, Extension(auth): Extension<Auth>)
     {
         return Err(reject!(format!("仅域管理员可操作")));
     }
-    if UserOrg::find_by_id(&body.user_id, &body.org_id)
-        .await
-        .is_err()
-    {
+    let user_orgs = UserOrg::find_by_org(&body.org_id).await?;
+    let user_ids: Vec<String> = user_orgs.into_iter().map(|v| v.user_id.clone()).collect();
+    let found = body.user_ids.iter().find(|v| !user_ids.contains(&v));
+    if let Some(found) = found {
         return Err(reject!(format!(
-            "用户 {} 未加入组织 {}",
-            &body.user_id, &body.org_id
+            "用户 {} 未参与组织 {}",
+            found, &body.org_id
         )));
     }
     let left = body.save().await?;

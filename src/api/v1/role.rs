@@ -8,7 +8,7 @@ use tower_http::auth::RequireAuthorizationLayer;
 
 use crate::{
     repository::{
-        dao::{Domain, Role, UserRole},
+        dao::{Domain, Role, User, UserRole},
         dto::{
             NewRole, QueryRole, UpdateRole, UpdateUserRole, UserChangeRole, UserGrantRole,
             UserRevokeRole,
@@ -133,24 +133,20 @@ async fn revoke(Json(body): Json<UserRevokeRole>, Extension(auth): Extension<Aut
 }
 
 async fn change(Json(body): Json<UserChangeRole>, Extension(auth): Extension<Auth>) -> APIResult {
-    let roles = Role::find_by_ids(body.role_ids.clone()).await?;
-    let found = roles.iter().find(|v| v.domain_id != body.domain_id);
-    if let Some(role) = found {
-        return Err(reject!(format!(
-            "角色 {:?} 不属于域 {:?}",
-            &role.id, &body.domain_id
-        )));
+    let role: Role = Role::find_by_id(&body.role_id)
+        .await
+        .map_err(|_| reject!(format!("角色 {} 不存在", &body.role_id)))?;
+    let users = User::find_by_ids(body.user_ids.clone()).await?;
+    let user_ids: Vec<String> = users.iter().map(|v| v.id.clone()).collect();
+    let found = body.user_ids.iter().find(|v| !user_ids.contains(&v));
+    if let Some(user_id) = found {
+        return Err(reject!(format!("用户 {:?} 不存在", user_id)));
     }
     let user_roles = UserRole::find_by_user(&auth.id).await?;
-    let user_role = user_roles
-        .into_iter()
-        .min_by(|x, y| x.role_level.cmp(&y.role_level))
-        .unwrap();
-    let found = roles.iter().find(|v| v.level < user_role.role_level);
-    if let Some(role) = found {
-        return Err(reject!(format!("不能操作高等级角色 {:?}", &role.id)));
+    if !auth.is_admin && !user_roles.into_iter().any(|v| v.role_level < role.level) {
+        return Err(reject!(format!("不能操作高等级角色 {:?}", role.id)));
     }
-    let user_roles = body.save(roles).await?;
+    let user_roles = body.save(role, users).await?;
     Ok(reply!(user_roles))
 }
 

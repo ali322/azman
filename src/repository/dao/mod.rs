@@ -1,8 +1,8 @@
 mod user;
-mod role;
-mod perm;
-mod org;
-mod domain;
+pub mod role;
+pub mod perm;
+pub mod org;
+pub mod domain;
 mod role_perm;
 mod user_role;
 mod user_org;
