@@ -6,29 +6,33 @@ use crate::{
     util::{default_expire, now, serde_format::naive_datetime},
 };
 use chrono::NaiveDateTime;
-use rbatis::crud::CRUDMut;
+use rbatis::crud::{CRUDMut, CRUD};
 use serde::{Deserialize, Serialize};
 use validator::Validate;
 
 #[derive(Debug, Deserialize, Serialize, Validate)]
 pub struct UserGrantRole {
-    pub user_id: String,
+    pub user_ids: Vec<String>,
     pub role_id: String,
     #[serde(skip_deserializing)]
     pub role_level: i32,
 }
 
 impl UserGrantRole {
-    pub async fn save(self) -> Result<UserRole, DBError> {
-        let dao = UserRole {
-            user_id: self.user_id,
-            role_id: self.role_id,
-            role_level: self.role_level,
-            expire: default_expire(),
-            created_at: now(),
-        };
-        UserRole::create_one(&dao).await?;
-        Ok(dao)
+    pub async fn save(self) -> Result<Vec<UserRole>, DBError> {
+        let user_roles: Vec<UserRole> = self
+            .user_ids
+            .iter()
+            .map(|user_id| UserRole {
+                role_id: self.role_id.clone(),
+                user_id: user_id.clone(),
+                role_level: self.role_level,
+                created_at: now(),
+                expire: default_expire(),
+            })
+            .collect();
+        POOL.save_batch(&user_roles, &[]).await?;
+        Ok(user_roles)
     }
 }
 
@@ -56,7 +60,7 @@ impl UpdateUserRole {
 
 #[derive(Debug, Deserialize, Serialize, Validate)]
 pub struct UserRevokeRole {
-    pub user_id: String,
+    pub user_ids: Vec<String>,
     pub role_id: String,
 }
 
@@ -64,7 +68,7 @@ impl UserRevokeRole {
     pub async fn save(self) -> Result<u64, DBError> {
         let w = POOL
             .new_wrapper()
-            .eq("user_id", self.user_id)
+            .r#in("user_id", &self.user_ids)
             .and()
             .eq("role_id", self.role_id);
         UserRole::delete_one(&w).await

@@ -93,17 +93,23 @@ async fn grant(Json(mut body): Json<UserGrantRole>, Extension(auth): Extension<A
     let role: Role = Role::find_by_id(&body.role_id)
         .await
         .map_err(|_| reject!(format!("角色 {} 不存在", &body.role_id)))?;
+    let users = User::find_by_ids(body.user_ids.clone()).await?;
+    let user_ids: Vec<String> = users.iter().map(|v| v.id.clone()).collect();
+    let found = body.user_ids.iter().find(|v| !user_ids.contains(&v));
+    if let Some(user_id) = found {
+        return Err(reject!(format!("用户 {:?} 不存在", user_id)));
+    }
     let user_roles = UserRole::find_by_user(&auth.id).await?;
     if !auth.is_admin && !user_roles.into_iter().any(|v| v.role_level < role.level) {
         return Err(reject!(format!("不能操作高等级角色 {:?}", role.id)));
     }
-    if UserRole::find_by_id(&body.user_id, &body.role_id)
-        .await
-        .is_ok()
-    {
+    let user_roles = UserRole::find_by_role(&body.role_id).await?;
+    let user_ids: Vec<String> = user_roles.into_iter().map(|v| v.user_id.clone()).collect();
+    let found = body.user_ids.iter().find(|v| user_ids.contains(&v));
+    if let Some(found) = found {
         return Err(reject!(format!(
             "用户 {} 已赋予角色 {}",
-            &body.user_id, body.role_id
+            found, &body.role_id
         )));
     }
     body.role_level = role.level;
@@ -115,17 +121,23 @@ async fn revoke(Json(body): Json<UserRevokeRole>, Extension(auth): Extension<Aut
     let role: Role = Role::find_by_id(&body.role_id)
         .await
         .map_err(|_| reject!(format!("角色 {} 不存在", &body.role_id)))?;
+    let users = User::find_by_ids(body.user_ids.clone()).await?;
+    let user_ids: Vec<String> = users.iter().map(|v| v.id.clone()).collect();
+    let found = body.user_ids.iter().find(|v| !user_ids.contains(&v));
+    if let Some(user_id) = found {
+        return Err(reject!(format!("用户 {:?} 不存在", user_id)));
+    }
     let user_roles = UserRole::find_by_user(&auth.id).await?;
     if !auth.is_admin && !user_roles.into_iter().any(|v| v.role_level < role.level) {
         return Err(reject!(format!("不能操作高等级角色 {:?}", role.id)));
     }
-    if UserRole::find_by_id(&body.user_id, &body.role_id)
-        .await
-        .is_err()
-    {
+    let user_roles = UserRole::find_by_role(&body.role_id).await?;
+    let user_ids: Vec<String> = user_roles.into_iter().map(|v| v.user_id.clone()).collect();
+    let found = body.user_ids.iter().find(|v| !user_ids.contains(&v));
+    if let Some(found) = found {
         return Err(reject!(format!(
             "用户 {} 未赋予角色 {}",
-            &body.user_id, body.role_id
+            found, &body.role_id
         )));
     }
     let revoked = body.save().await?;

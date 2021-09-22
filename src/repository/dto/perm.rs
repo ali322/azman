@@ -89,7 +89,8 @@ impl QueryPerm {
         let sort_order = self.sort_order.unwrap_or("DESC".to_string());
         let mut w = POOL.new_wrapper();
         if let Some(domain_id) = self.domain_id {
-            w = w.eq("domain_id", &domain_id)
+            let domain_ids: Vec<&str> = domain_id.split(",").into_iter().collect();
+            w = w.r#in("domain_id", &domain_ids);
         }
         if let Some(key) = self.key {
             if key != "" {

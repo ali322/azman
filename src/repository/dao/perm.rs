@@ -39,11 +39,8 @@ impl Perm {
         }
         Self::find_list(&w).await
     }
-    pub async fn find_all(domain_id: Option<String>) -> Result<Vec<Self>, DBError> {
-        let mut w = POOL.new_wrapper();
-        if let Some(domain_id) = domain_id {
-            w = w.eq("domain_id", domain_id);
-        }
+    pub async fn find_all(domain_ids: Vec<String>) -> Result<Vec<Self>, DBError> {
+        let w = POOL.new_wrapper().r#in("domain_id", &domain_ids);
         Self::find_list(&w).await
     }
 }
