@@ -54,7 +54,7 @@ pub struct UpdateRole {
     pub description: Option<String>,
     #[validate(length(min = 1, max = 200))]
     pub value: Option<String>,
-    #[validate(range(min = 2, max = 99))]
+    #[validate(range(min = 1, max = 999))]
     pub level: Option<i32>,
     #[serde(skip_deserializing)]
     pub updated_by: Option<String>,
