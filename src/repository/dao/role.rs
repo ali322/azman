@@ -32,11 +32,11 @@ pub struct Role {
 impl Role {
     pub async fn find_by_ids(id: Vec<String>) -> Result<Vec<Self>, DBError> {
         let w = POOL.new_wrapper().r#in("id", &id);
-        Self::find_list(&w).await
+        Self::find_list(w).await
     }
     pub async fn find_all(domain_ids: Vec<String>) -> Result<Vec<Self>, DBError> {
         let w = POOL.new_wrapper().r#in("domain_id", &domain_ids);
-        Self::find_list(&w).await
+        Self::find_list(w).await
     }
 }
 
@@ -50,7 +50,7 @@ impl IntoVecOfVo for Vec<Role> {
     async fn into_vo(&self) -> Result<Vec<vo::Role>, DBError> {
         let domain_ids: Vec<String> = self.iter().map(|v| v.domain_id.clone()).collect();
         let w = POOL.new_wrapper().r#in("id", &domain_ids);
-        let domains = POOL.fetch_list_by_wrapper::<Domain>(&w).await?;
+        let domains = POOL.fetch_list_by_wrapper::<Domain>(w).await?;
         let mut domain_map = HashMap::new();
         for domain in domains {
             domain_map.insert(domain.id.clone(), domain.clone());

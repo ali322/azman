@@ -51,9 +51,9 @@ impl UpdateUserRole {
             .eq("user_id", self.user_id)
             .and()
             .eq("role_id", self.role_id);
-        let mut dao = UserRole::find_one(&w).await?;
+        let mut dao = UserRole::find_one(w.clone()).await?;
         dao.expire = self.expire;
-        UserRole::update_one(&dao, &w).await?;
+        UserRole::update_one(&dao, w).await?;
         Ok(dao)
     }
 }
@@ -71,7 +71,7 @@ impl UserRevokeRole {
             .r#in("user_id", &self.user_ids)
             .and()
             .eq("role_id", self.role_id);
-        UserRole::delete_one(&w).await
+        UserRole::delete_one(w).await
     }
 }
 
@@ -85,7 +85,7 @@ impl UserChangeRole {
     pub async fn save(self, role: Role, users: Vec<User>) -> Result<Vec<UserRole>, DBError> {
         let mut tx = POOL.acquire_begin().await.unwrap();
         let w = POOL.new_wrapper().eq("role_id", &self.role_id);
-        tx.remove_by_wrapper::<UserRole>(&w).await?;
+        tx.remove_by_wrapper::<UserRole>(w).await?;
         let rows: Vec<UserRole> = users
             .into_iter()
             .map(|user| UserRole {

@@ -27,16 +27,16 @@ impl UserRole {
             .eq("user_id", user_id)
             .and()
             .eq("role_id", role_id);
-        Self::find_one(&w).await
+        Self::find_one(w).await
     }
     pub async fn find_by_user(
         user_id: &str,
     ) -> Result<Vec<Self>, DBError> {
         let w = POOL.new_wrapper().eq("user_id", user_id);
-        Self::find_list(&w).await
+        Self::find_list(w).await
     }
     pub async fn find_by_role(role_id: &str) -> Result<Vec<Self>, DBError> {
         let w = POOL.new_wrapper().eq("role_id", role_id);
-        Self::find_list(&w).await
+        Self::find_list(w).await
     }
 }

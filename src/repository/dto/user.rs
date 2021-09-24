@@ -58,11 +58,11 @@ pub struct UpdateUser {
 impl UpdateUser {
     pub async fn save(self, id: &str) -> Result<User, DBError> {
         let w = POOL.new_wrapper().eq("id", id);
-        let mut dao = User::find_one(&w).await?;
+        let mut dao = User::find_one(w.clone()).await?;
         dao.email = self.email;
         dao.avatar = self.avatar;
         dao.memo = self.memo;
-        User::update_one(&dao, &w).await?;
+        User::update_one(&dao, w).await?;
         Ok(dao)
     }
 }
@@ -83,7 +83,7 @@ impl LoginUser {
         let mut dao = dao.to_owned();
         dao.last_logined_at = now();
         let w = POOL.new_wrapper().eq("id", &dao.id);
-        User::update_one(&dao, &w).await?;
+        User::update_one(&dao, w).await?;
         Ok(dao)
     }
 }
@@ -143,7 +143,7 @@ impl ChangePassword {
         let hashed_password = hash(&self.new_password, 4).unwrap();
         dao.password = hashed_password;
         let w = POOL.new_wrapper().eq("id", &dao.id);
-        User::update_one(&dao, &w).await?;
+        User::update_one(&dao, w).await?;
         Ok(dao)
     }
 }
@@ -162,7 +162,7 @@ impl ResetPassword {
         let mut dao = dao.to_owned();
         let w = POOL.new_wrapper().eq("id", &dao.id);
         dao.password = hashed_password;
-        User::update_one(&dao, &w).await?;
+        User::update_one(&dao, w).await?;
         Ok(dao)
     }
 }
@@ -192,6 +192,6 @@ impl QueryUser {
           }
       }
       w = w.order_by(&sort_order.to_uppercase() == "ASC", &[&sort_by]);
-      POOL.fetch_page_by_wrapper::<User>(&w, &req).await
+      POOL.fetch_page_by_wrapper::<User>(w, &req).await
     }
 }

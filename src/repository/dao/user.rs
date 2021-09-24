@@ -26,7 +26,7 @@ pub struct User{
 impl User {
     pub async fn find_by_username(username: &str) -> Result<Self, DBError> {
         let w = POOL.new_wrapper().eq("username", username);
-        Self::find_one(&w).await
+        Self::find_one(w).await
     }
     pub async fn find_by_username_or_email(username_or_email: &str) -> Result<Self, DBError> {
         let w = POOL
@@ -34,6 +34,6 @@ impl User {
             .eq("username", username_or_email)
             .or()
             .eq("email", username_or_email);
-        Self::find_one(&w).await
+        Self::find_one(w).await
     }
 }

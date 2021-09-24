@@ -58,12 +58,12 @@ pub struct UpdatePerm {
 impl UpdatePerm {
     pub async fn save(self, id: &str) -> Result<Perm, DBError> {
         let w = POOL.new_wrapper().eq("id", id);
-        let mut dao = Perm::find_one(&w).await?;
+        let mut dao = Perm::find_one(w.clone()).await?;
         dao.name = self.name;
         dao.description = self.description;
         dao.value = self.value;
         dao.updated_by = self.updated_by;
-        Perm::update_one(&dao, &w).await?;
+        Perm::update_one(&dao, w).await?;
         Ok(dao)
     }
 }
@@ -98,7 +98,7 @@ impl QueryPerm {
             }
         }
         w = w.order_by(&sort_order.to_uppercase() == "ASC", &[&sort_by]);
-        let ret = POOL.fetch_page_by_wrapper::<Perm>(&w, &req).await?;
+        let ret = POOL.fetch_page_by_wrapper::<Perm>(w, &req).await?;
 
         let records = ret.records.into_vo().await?;
         Ok(Page::<vo::Perm> {

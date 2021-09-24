@@ -17,10 +17,10 @@ pub struct RolePerm {
 impl RolePerm{
   pub async fn find_by_id(role_id: &str, perm_id: &str) -> Result<Self, DBError> {
     let w = POOL.new_wrapper().eq("role_id", role_id).and().eq("perm_id", perm_id);
-    Self::find_one(&w).await
+    Self::find_one(w).await
   }
   pub async fn find_by_role(role_id: &str) -> Result<Vec<Self>, DBError> {
     let w = POOL.new_wrapper().eq("role_id", role_id);
-    Self::find_list(&w).await
+    Self::find_list(w).await
   }
 }

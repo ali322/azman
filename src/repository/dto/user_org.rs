@@ -44,6 +44,6 @@ impl UserLeaveOrg {
             .r#in("user_id", &self.user_ids)
             .and()
             .eq("org_id", self.org_id);
-        UserOrg::delete_one(&w).await
+        UserOrg::delete_one(w).await
     }
 }

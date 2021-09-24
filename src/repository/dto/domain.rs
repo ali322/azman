@@ -91,12 +91,12 @@ pub struct UpdateDomain {
 impl UpdateDomain {
     pub async fn save(self, id: &str) -> Result<Domain, DBError> {
         let w = POOL.new_wrapper().eq("id", id);
-        let mut dao = Domain::find_one(&w).await?;
+        let mut dao = Domain::find_one(w.clone()).await?;
         if let Some(name) = self.name {
             dao.name = name;
         }
         dao.description = self.description;
-        Domain::update_one(&dao, &w).await?;
+        Domain::update_one(&dao, w).await?;
         Ok(dao)
     }
 }

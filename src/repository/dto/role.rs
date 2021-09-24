@@ -63,7 +63,7 @@ pub struct UpdateRole {
 impl UpdateRole {
     pub async fn save(self, id: &str) -> Result<Role, DBError> {
         let w = POOL.new_wrapper().eq("id", id);
-        let mut dao = Role::find_one(&w).await?;
+        let mut dao = Role::find_one(w.clone()).await?;
         if let Some(name) = self.name {
             dao.name = name;
         }
@@ -75,7 +75,7 @@ impl UpdateRole {
         }
         dao.description = self.description;
         dao.updated_by = self.updated_by;
-        Role::update_one(&dao, &w).await?;
+        Role::update_one(&dao, w).await?;
         Ok(dao)
     }
 }
@@ -110,7 +110,7 @@ impl QueryRole {
             }
         }
         w = w.order_by(&sort_order.to_uppercase() == "ASC", &[&sort_by]);
-        let ret = POOL.fetch_page_by_wrapper::<Role>(&w, &req).await?;
+        let ret = POOL.fetch_page_by_wrapper::<Role>(w, &req).await?;
 
         let records = ret.records.into_vo().await?;
         Ok(Page::<vo::Role> {

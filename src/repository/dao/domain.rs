@@ -28,7 +28,7 @@ pub struct Domain {
 impl Domain{
   pub async fn find_by_admin_role(role_ids: Vec<String>) -> Result<Vec<Self>, DBError>{
     let w = POOL.new_wrapper().r#in("admin_role_id", &role_ids);
-    Self::find_list(&w).await
+    Self::find_list(w).await
   }
 }
 

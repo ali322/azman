@@ -41,7 +41,7 @@ impl RoleRevokePerm {
             .r#in("perm_id", &self.perm_ids)
             .and()
             .eq("role_id", self.role_id);
-        RolePerm::delete_one(&w).await
+        RolePerm::delete_one(w).await
     }
 }
 
@@ -55,7 +55,7 @@ impl RoleChangePerm {
     pub async fn save(self) -> Result<Vec<RolePerm>, DBError> {
         let mut tx = POOL.acquire_begin().await.unwrap();
         let w = POOL.new_wrapper().eq("role_id", &self.role_id);
-        tx.remove_by_wrapper::<RolePerm>(&w).await?;
+        tx.remove_by_wrapper::<RolePerm>(w).await?;
         let rows: Vec<RolePerm> = self.perm_ids
             .iter()
             .map(|perm_id| RolePerm {

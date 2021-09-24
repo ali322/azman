@@ -54,12 +54,12 @@ pub struct UpdateOrg {
 impl UpdateOrg {
     pub async fn save(self, id: &str) -> Result<Org, DBError> {
         let w = POOL.new_wrapper().eq("id", id);
-        let mut dao = Org::find_one(&w).await?;
+        let mut dao = Org::find_one(w.clone()).await?;
         if let Some(name) = self.name {
             dao.name = name;
         }
         dao.description = self.description;
-        Org::update_one(&dao, &w).await?;
+        Org::update_one(&dao, w).await?;
         Ok(dao)
     }
 }
@@ -94,7 +94,7 @@ impl QueryOrg {
             }
         }
         w = w.order_by(&sort_order.to_uppercase() == "ASC", &[&sort_by]);
-        let ret = POOL.fetch_page_by_wrapper::<Org>(&w, &req).await?;
+        let ret = POOL.fetch_page_by_wrapper::<Org>(w, &req).await?;
 
         let records = ret.records.into_vo().await?;
         Ok(Page::<vo::Org> {
