@@ -2,7 +2,7 @@ use crate::{
     repository::{dao::RolePerm, DBError, Dao, POOL},
     util::now,
 };
-use rbatis::crud::CRUD;
+use rbatis::crud::{CRUD, CRUDMut};
 use serde::{Deserialize, Serialize};
 use validator::Validate;
 
@@ -42,5 +42,30 @@ impl RoleRevokePerm {
             .and()
             .eq("role_id", self.role_id);
         RolePerm::delete_one(&w).await
+    }
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct RoleChangePerm {
+    pub perm_ids: Vec<String>,
+    pub role_id: String,
+}
+
+impl RoleChangePerm {
+    pub async fn save(self) -> Result<Vec<RolePerm>, DBError> {
+        let mut tx = POOL.acquire_begin().await.unwrap();
+        let w = POOL.new_wrapper().eq("role_id", &self.role_id);
+        tx.remove_by_wrapper::<RolePerm>(&w).await?;
+        let rows: Vec<RolePerm> = self.perm_ids
+            .iter()
+            .map(|perm_id| RolePerm {
+                role_id: self.role_id.clone(),
+                perm_id: perm_id.clone(),
+                created_at: now(),
+            })
+            .collect();
+        tx.save_batch(&rows, &[]).await?;
+        tx.commit().await.unwrap();
+        Ok(rows)
     }
 }

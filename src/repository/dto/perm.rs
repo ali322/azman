@@ -19,7 +19,7 @@ pub struct NewPerm {
     pub description: Option<String>,
     #[validate(length(min = 1, max = 200))]
     pub value: String,
-    pub domain_id: String,
+    pub domain_id: Option<String>,
     #[serde(skip_deserializing)]
     pub created_by: Option<String>,
 }
@@ -32,7 +32,7 @@ impl NewPerm {
             name: self.name,
             description: self.description,
             value: self.value,
-            domain_id: self.domain_id,
+            domain_id: self.domain_id.unwrap(),
             is_deleted: 0,
             created_by: self.created_by.clone(),
             updated_by: self.created_by,
@@ -110,4 +110,10 @@ impl QueryPerm {
             search_count: ret.search_count,
         })
     }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct BatchInsertPerm{
+  pub domain_id: String,
+  pub perms: Vec<NewPerm>
 }
