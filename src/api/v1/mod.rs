@@ -1,27 +1,23 @@
-use axum::{
-    routing::BoxRoute,
-    Router,
-};
-use tower::layer::layer_fn;
 use crate::util::Cors;
+use axum::{routing::BoxRoute, Router};
+use tower::layer::layer_fn;
 
-mod role;
-mod perm;
-mod user;
 mod auth;
-mod org;
 mod domain;
+mod org;
+mod perm;
 mod rbac;
+mod role;
+mod user;
 
 pub fn apply_routes() -> Router<BoxRoute> {
-    let mut v1 = Router::new().boxed();
-    v1 = user::apply_routes(v1.boxed());
-    v1 = role::apply_routes(v1.boxed());
-    v1 = perm::apply_routes(v1.boxed());
-    v1 = org::apply_routes(v1.boxed());
-    v1 = domain::apply_routes(v1.boxed());
-    v1 = rbac::apply_routes(v1.boxed());
-    v1 = auth::apply_routes(v1.boxed());
-    v1 = v1.layer(layer_fn(|inner|Cors{ inner })).boxed();
-    v1
+    auth::apply_routes()
+        .or(user::apply_routes())
+        .or(domain::apply_routes())
+        .or(org::apply_routes())
+        .or(role::apply_routes())
+        .or(perm::apply_routes())
+        .or(rbac::apply_routes())
+        .layer(layer_fn(|inner| Cors { inner }))
+        .boxed()
 }

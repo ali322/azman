@@ -174,9 +174,10 @@ async fn expire(Json(body): Json<UpdateUserRole>, Extension(auth): Extension<Aut
     Ok(reply!(user_role))
 }
 
-pub fn apply_routes(v1: Router<BoxRoute>) -> Router<BoxRoute> {
+pub fn apply_routes() -> Router<BoxRoute> {
+    let router = Router::new();
     let restrict_layer = RequireAuthorizationLayer::custom(Restrict::new());
-    v1.route("/role", post(create).get(all))
+    router.route("/role", post(create).get(all))
         .route("/role/:id", put(update).get(one).delete(remove))
         .route("/grant/role", post(grant))
         .route("/revoke/role", post(revoke))

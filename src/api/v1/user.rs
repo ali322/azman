@@ -70,9 +70,11 @@ async fn me(Extension(auth): Extension<Auth>) -> APIResult {
     Ok(reply!(user))
 }
 
-pub fn apply_routes(v1: Router<BoxRoute>) -> Router<BoxRoute> {
+pub fn apply_routes() -> Router<BoxRoute> {
+    let router = Router::new();
     let restrict_layer = RequireAuthorizationLayer::custom(Restrict::new());
-    v1.route("/user", get(all))
+    router
+        .route("/user", get(all))
         .route("/user/:id", put(update).get(one))
         .route("/change/password", post(change_password))
         .route("/reset/:id/password", post(reset_password))

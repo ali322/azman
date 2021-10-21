@@ -132,9 +132,10 @@ async fn leave(Json(body): Json<UserLeaveOrg>, Extension(auth): Extension<Auth>)
     Ok(reply!(left))
 }
 
-pub fn apply_routes(v1: Router<BoxRoute>) -> Router<BoxRoute> {
+pub fn apply_routes() -> Router<BoxRoute> {
+    let router = Router::new();
     let restrict_layer = RequireAuthorizationLayer::custom(Restrict::new());
-    v1.route("/org", post(create).get(all))
+    router.route("/org", post(create).get(all))
         .route("/org/:id", put(update).get(one))
         .route("/join/org", post(join))
         .route("/leave/org", post(leave))

@@ -123,9 +123,10 @@ async fn domains_of_user(Path(id): Path<String>, Extension(_): Extension<Auth>) 
     Ok(reply!(domains))
 }
 
-pub fn apply_routes(v1: Router<BoxRoute>) -> Router<BoxRoute> {
+pub fn apply_routes() -> Router<BoxRoute> {
+    let router = Router::new();
     let restrict_layer = RequireAuthorizationLayer::custom(Restrict::new());
-    v1.route("/access", post(access))
+    router.route("/access", post(access))
         .route("/user/:id/role", get(roles_of_user))
         .route("/user/:id/org", get(orgs_of_user))
         .route("/role/:id/user", get(users_of_role))

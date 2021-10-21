@@ -72,8 +72,10 @@ async fn connect(Json(body): Json<ConnectUser>) -> APIResult {
     }))
 }
 
-pub fn apply_routes(v1: Router<BoxRoute>) -> Router<BoxRoute> {
-    v1.route("/register", post(register))
+pub fn apply_routes() -> Router<BoxRoute> {
+    let router = Router::new();
+    router
+        .route("/register", post(register))
         .route("/login", post(login))
         .route("/connect", post(connect))
         .boxed()

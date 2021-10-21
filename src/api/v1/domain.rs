@@ -49,9 +49,11 @@ async fn update(
     Ok(reply!(updated))
 }
 
-pub fn apply_routes(v1: Router<BoxRoute>) -> Router<BoxRoute> {
+pub fn apply_routes() -> Router<BoxRoute> {
+    let router = Router::new();
     let restrict_layer = RequireAuthorizationLayer::custom(Restrict::new());
-    v1.route("/domain", post(create).get(all))
+    router
+        .route("/domain", post(create).get(all))
         .route("/domain/:id", put(update).get(one))
         .layer(restrict_layer)
         .boxed()

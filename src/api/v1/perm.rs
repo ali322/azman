@@ -229,9 +229,10 @@ async fn create_all(
     Ok(reply!(perms))
 }
 
-pub fn apply_routes(v1: Router<BoxRoute>) -> Router<BoxRoute> {
+pub fn apply_routes() -> Router<BoxRoute> {
+    let router = Router::new();
     let restrict_layer = RequireAuthorizationLayer::custom(Restrict::new());
-    v1.route("/perm", post(create).get(all))
+    router.route("/perm", post(create).get(all))
         .route("/perm/:id", put(update).get(one).delete(remove))
         .route("/grant/perm", post(grant))
         .route("/revoke/perm", post(revoke))
